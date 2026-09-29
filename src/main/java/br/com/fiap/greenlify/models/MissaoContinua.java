@@ -1,87 +1,184 @@
 package br.com.fiap.greenlify.models;
 
+import br.com.fiap.greenlify.dao.PontuacaoDAO;
 import br.com.fiap.greenlify.enums.CategoriaEnum;
+import br.com.fiap.greenlify.enums.TipoMetricaEnum;
 import br.com.fiap.greenlify.enums.TipoMissaoEnum;
 
 /**
- * Classe base que representa uma missão sustentável cadastrada na
- * plataforma GreenLify. Serve como superclasse para os tipos específicos de
- * missão, como {@link MissaoContinua} e {@link MissaoMensal}.
+ * Representa uma missão do tipo contínua, ou seja, uma missão que pode ser
+ * realizada repetidamente pelo usuário até atingir um limite de realizações,
+ * gerando progresso mensurável (ex.: economia de água, energia ou carbono).
  */
-public class Missao {
+public class MissaoContinua extends Missao {
 
-    private int idMissao;
-    private String nome;
-    private String descricao;
-    private String comoComprovar;
-    private String requisitos;
-    private CategoriaEnum categoria;
-    private TipoMissaoEnum tipoMissao;
+    private int limiteRealizacoes;
+    private int tentativasUsuario;
+    private double valorProgresso;
+    private TipoMetricaEnum tipoMetrica;
+    private int valorMetrica;
+    private int idPontuacao;
+
+    /**
+     * Cria uma missão contínua vazia, já definindo o tipo da missão como
+     * {@link TipoMissaoEnum#MISSAO_CONTINUA}.
+     */
+    public MissaoContinua() {
+        super();
+        setTipoMissao(TipoMissaoEnum.MISSAO_CONTINUA);
+    }
+
+    /**
+     * Cria uma missão contínua com todos os dados informados.
+     *
+     * @param idMissao         identificador da missão
+     * @param nome             nome da missão
+     * @param descricao        descrição da missão
+     * @param comoComprovar    instruções de como comprovar a realização da missão
+     * @param requisitos       requisitos necessários para realizar a missão
+     * @param categoria        categoria da missão
+     * @param limiteRealizacoes número máximo de vezes que a missão pode ser realizada
+     * @param idPontuacao      identificador da pontuação associada à missão
+     * @param valorProgresso   valor de progresso gerado a cada realização
+     * @param tipoMetrica      tipo de métrica utilizada para medir o progresso
+     * @param valorMetrica     valor de referência da métrica
+     */
+    public MissaoContinua(int idMissao, String nome, String descricao, String comoComprovar, String requisitos,
+                          CategoriaEnum categoria, int limiteRealizacoes, int idPontuacao, double valorProgresso,
+                          TipoMetricaEnum tipoMetrica, int valorMetrica) {
+
+        setIdMissao(idMissao);
+        setNome(nome);
+        setDescricao(descricao);
+        setComoComprovar(comoComprovar);
+        setRequisitos(requisitos);
+        setCategoria(categoria);
+        setTipoMissao(TipoMissaoEnum.MISSAO_CONTINUA);
+
+        this.limiteRealizacoes = limiteRealizacoes;
+        this.idPontuacao = idPontuacao;
+        this.valorProgresso = valorProgresso;
+        this.tipoMetrica = tipoMetrica;
+        this.valorMetrica = valorMetrica;
+        this.tentativasUsuario = 0;
+    }
 
     @Override
     public String toString() {
-        return "\n\nID Missão: " + idMissao +
-                "\nNome: " + nome +
-                "\nDescricao:" + descricao +
-                "\nComoComprovar: " + comoComprovar +
-                "\nRequisitos: " + requisitos +
-                "\nCategoria: " + categoria +
-                "\nTipoMissao: " + tipoMissao;
+        PontuacaoDAO pontuacaoDAO = new PontuacaoDAO();
+        Pontuacao pont = pontuacaoDAO.buscarPorId(idPontuacao);
+
+        if (pont != null) {
+            return "\n\nID: " + getIdMissao() +
+                    "\nNome: " + getNome() +
+                    "\nDescrição: " + getDescricao() +
+                    "\nComo comprovar: " + getComoComprovar() +
+                    "\nRequisitos: " + getRequisitos() +
+                    "\nCategoria : " + getCategoria() +
+                    "\nLimite de Realizações: " + getLimiteRealizacoes() +
+                    "\nTipo de métrica: " + getTipoMetrica() +
+                    "\nValor métrica: " + getValorMetrica() +
+                    "\nDificuldade: " + pont.getDificuldade() +
+                    "\nImpacto: " + pont.getImpacto() +
+                    "\nPontos: " + pont.getValorBase();
+        } else {
+            return "\n\nID: " + getIdMissao() +
+                    "\nNome: " + getNome() +
+                    "\nDescrição: " + getDescricao() +
+                    "\nComo comprovar: " + getComoComprovar() +
+                    "\nRequisitos: " + getRequisitos() +
+                    "\nCategoria : " + getCategoria() +
+                    "\nLimite de Realizações: " + getLimiteRealizacoes() +
+                    "\nTipo de métrica: " + getTipoMetrica() +
+                    "\nValor métrica: " + getValorMetrica() +
+                    "\nPontuação: não definida";
+        }
     }
 
-    public int getIdMissao() {
-        return idMissao;
+    /**
+     * Atualiza o total acumulado no {@link PerfilSustentavel} do usuário de
+     * acordo com o tipo de métrica da missão e retorna uma mensagem
+     * descrevendo o impacto gerado.
+     *
+     * @param perfil perfil sustentável do usuário a ser atualizado
+     * @return mensagem descrevendo o impacto ambiental gerado pela missão,
+     *         ou string vazia caso o tipo de métrica não esteja definido
+     */
+    public String comparaImpacto(PerfilSustentavel perfil) {
+        if (getTipoMetrica() == null) {
+            return "";
+        }
+
+        switch (getTipoMetrica()) {
+            case KG_CO2 -> {
+                perfil.setTotalCarbonoEconomizado(perfil.getTotalCarbonoEconomizado() + valorProgresso);
+                return "Você economizou " + valorProgresso + " " + tipoMetrica + " equivalente!";
+            }
+            case KWH -> {
+                perfil.setTotalEnergiaEconomizada(perfil.getTotalEnergiaEconomizada() + valorProgresso);
+                return "Você economizou " + valorProgresso + " " + tipoMetrica + " de energia!";
+            }
+            case M3 -> {
+                perfil.setTotalAguaEconomizada(perfil.getTotalAguaEconomizada() + valorProgresso);
+                return "Você economizou " + valorProgresso + " " + tipoMetrica + " de água!";
+            }
+            case KM -> {
+                return "Você andou " + valorProgresso + " " + tipoMetrica + " de bicicleta!";
+            }
+            case ITENS_RECICLADOS -> {
+                return "Você descartou " + valorProgresso + " de " + tipoMetrica + "!";
+            }
+            default -> {
+                return "";
+            }
+        }
     }
 
-    public void setIdMissao(int idMissao) {
-        this.idMissao = idMissao;
+    public int getLimiteRealizacoes() {
+        return limiteRealizacoes;
     }
 
-    public String getNome() {
-        return nome;
+    public void setLimiteRealizacoes(int limiteRealizacoes) {
+        this.limiteRealizacoes = limiteRealizacoes;
     }
 
-    public void setNome(String nome) {
-        this.nome = nome;
+    public int getTentativasUsuario() {
+        return tentativasUsuario;
     }
 
-    public String getComoComprovar() {
-        return comoComprovar;
+    public void setTentativasUsuario(int tentativasUsuario) {
+        this.tentativasUsuario = tentativasUsuario;
     }
 
-    public void setComoComprovar(String comoComprovar) {
-        this.comoComprovar = comoComprovar;
+    public double getValorProgresso() {
+        return valorProgresso;
     }
 
-    public String getRequisitos() {
-        return requisitos;
+    public void setValorProgresso(double valorProgresso) {
+        this.valorProgresso = valorProgresso;
     }
 
-    public void setRequisitos(String requisitos) {
-        this.requisitos = requisitos;
+    public TipoMetricaEnum getTipoMetrica() {
+        return tipoMetrica;
     }
 
-    public String getDescricao() {
-        return descricao;
+    public void setTipoMetrica(TipoMetricaEnum tipoMetrica) {
+        this.tipoMetrica = tipoMetrica;
     }
 
-    public void setDescricao(String descricao) {
-        this.descricao = descricao;
+    public int getValorMetrica() {
+        return valorMetrica;
     }
 
-    public CategoriaEnum getCategoria() {
-        return categoria;
+    public void setValorMetrica(int valorMetrica) {
+        this.valorMetrica = valorMetrica;
     }
 
-    public void setCategoria(CategoriaEnum categoria) {
-        this.categoria = categoria;
+    public int getIdPontuacao() {
+        return idPontuacao;
     }
 
-    public TipoMissaoEnum getTipoMissao() {
-        return tipoMissao;
-    }
-
-    public void setTipoMissao(TipoMissaoEnum tipoMissao) {
-        this.tipoMissao = tipoMissao;
+    public void setIdPontuacao(int idPontuacao) {
+        this.idPontuacao = idPontuacao;
     }
 }

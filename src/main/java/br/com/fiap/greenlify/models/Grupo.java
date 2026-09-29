@@ -3,74 +3,63 @@ package br.com.fiap.greenlify.models;
 import java.time.LocalDate;
 
 /**
- * Representa uma conta de energia elétrica vinculada a um {@link UsuarioComum},
- * que pode ser quitada utilizando o saldo em reais disponível em sua
- * {@link Carteira}.
+ * Representa um grupo de usuários dentro da plataforma GreenLify, utilizado
+ * para agrupar {@link UsuarioComum} e compor o ranking por grupos.
  */
-public class ContaLuz {
+public class Grupo {
 
-    private int idContaLuz;
-    private UsuarioComum usuario;
-    private String codigoBarras;
-    private double valorConta;
-    private LocalDate dataPagamento;
+    private int idGrupo;
+    private String nome;
+    private LocalDate dataCriacao;
+    private int limiteUsuarios;
+    private int statusGrupo;
 
-    /**
-     * Realiza o pagamento da conta de luz utilizando o saldo da carteira
-     * informada. O valor da conta é debitado da carteira somente se houver
-     * saldo suficiente.
-     *
-     * @param carteira carteira do usuário de onde o valor será debitado
-     * @return {@code true} se o pagamento foi realizado com sucesso;
-     *         {@code false} caso o saldo seja insuficiente
-     */
-    public boolean pagarConta(Carteira carteira) {
-        if (carteira.getValorReal() >= valorConta) {
-            carteira.setValorReal(carteira.getValorReal() - valorConta);
-            setDataPagamento(LocalDate.now());
-            return true;
-        } else {
-            return false;
-        }
+    @Override
+    public String toString() {
+        return "\n\nID: " + idGrupo +
+                "\nNome: " + nome +
+                "\nData de Criacao :" + dataCriacao +
+                "\nLimite de usuarios: " + limiteUsuarios +
+                "\nStatus do grupo: " + statusGrupo;
     }
 
-    public int getIdContaLuz() {
-        return idContaLuz;
+    public int getIdGrupo() {
+        return idGrupo;
     }
 
-    public void setIdContaLuz(int idContaLuz) {
-        this.idContaLuz = idContaLuz;
+    public void setIdGrupo(int idGrupo) {
+        this.idGrupo = idGrupo;
     }
 
-    public double getValorConta() {
-        return valorConta;
+    public String getNome() {
+        return nome;
     }
 
-    public void setValorConta(double valorConta) {
-        this.valorConta = valorConta;
+    public void setNome(String nome) {
+        this.nome = nome;
     }
 
-    public LocalDate getDataPagamento() {
-        return dataPagamento;
+    public LocalDate getDataCriacao() {
+        return dataCriacao;
     }
 
-    public void setDataPagamento(LocalDate dataPagamento) {
-        this.dataPagamento = dataPagamento;
+    public void setDataCriacao(LocalDate dataCriacao) {
+        this.dataCriacao = dataCriacao;
     }
 
-    public String getCodigoBarras() {
-        return codigoBarras;
+    public int getLimiteUsuarios() {
+        return limiteUsuarios;
     }
 
-    public void setCodigoBarras(String codigoBarras) {
-        this.codigoBarras = codigoBarras;
+    public void setLimiteUsuarios(int limiteUsuarios) {
+        this.limiteUsuarios = limiteUsuarios;
     }
 
-    public UsuarioComum getUsuario() {
-        return usuario;
+    public int getStatusGrupo() {
+        return statusGrupo;
     }
 
-    public void setUsuario(UsuarioComum usuario) {
-        this.usuario = usuario;
+    public void setStatusGrupo(int statusGrupo) {
+        this.statusGrupo = statusGrupo;
     }
 }
