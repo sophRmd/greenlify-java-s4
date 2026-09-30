@@ -265,4 +265,30 @@ public class AdminDAO {
         }
         return usuarios;
     }
+
+    public void alterarSenha(Admin admin){
+        conexao = ConnectionFactory.obterConexao();
+        PreparedStatement ps = null;
+
+        try {
+            String sql = "UPDATE Usuario SET senha = ? WHERE id_usuario = ? AND nr_nivel_acesso = 1";
+            ps = conexao.prepareStatement(sql);
+            ps.setString(1, admin.getSenha());
+            ps.setInt(2, admin.getIdUsuario());
+
+            ps.executeUpdate();
+            ps.close();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (conexao != null && !conexao.isClosed()) {
+                    conexao.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }
