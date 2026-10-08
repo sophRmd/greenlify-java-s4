@@ -18,6 +18,7 @@ public class Streak {
     private int sequenciaAtual;
     private LocalDate ultimaAtividade;
     private LocalDate primeiraAtividade;
+    private Usuario usuario;
 
     @Override
     public String toString() {
@@ -114,5 +115,13 @@ public class Streak {
 
     public void setMaiorSequencia(int maiorSequencia) {
         this.maiorSequencia = maiorSequencia;
+    }
+
+    public Usuario getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(Usuario usuario) {
+        this.usuario = usuario;
     }
 }

@@ -28,12 +28,13 @@ public class RecompensaDAO {
         PreparedStatement ps = null;
 
         try {
-            String sql = "INSERT INTO Recompensa (id_recompensa, nr_bonus_percentual, ds_recompensa) " +
+            String sql = "INSERT INTO Recompensa (id_recompensa, nr_bonus_percentual, nr_pontos_bonus, ds_recompensa) " +
                     "VALUES (?, ?, ?)";
             ps = conexao.prepareStatement(sql);
             ps.setInt(1, recompensa.getIdRecompensa());
             ps.setDouble(2, recompensa.getBonusPercentual());
-            ps.setString(3, recompensa.getDescricao());
+            ps.setInt(3, recompensa.getBonusPontos());
+            ps.setString(4, recompensa.getDescricao());
 
             ps.executeUpdate();
             ps.close();
@@ -61,12 +62,13 @@ public class RecompensaDAO {
         PreparedStatement ps = null;
 
         try {
-            String sql = "UPDATE Recompensa SET nr_bonus_percentual = ?, ds_recompensa = ? " +
+            String sql = "UPDATE Recompensa SET nr_bonus_percentual = ?, nr_bonus_pontos, ds_recompensa = ? " +
                     "WHERE id_recompensa = ?";
             ps = conexao.prepareStatement(sql);
             ps.setDouble(1, recompensa.getBonusPercentual());
-            ps.setString(2, recompensa.getDescricao());
-            ps.setInt(3, recompensa.getIdRecompensa());
+            ps.setInt(2, recompensa.getBonusPercentual());
+            ps.setString(3, recompensa.getDescricao());
+            ps.setInt(4, recompensa.getIdRecompensa());
 
             ps.executeUpdate();
             ps.close();

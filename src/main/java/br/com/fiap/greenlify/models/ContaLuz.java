@@ -10,10 +10,8 @@ import java.time.LocalDate;
 public class ContaLuz {
 
     private int idContaLuz;
-    private UsuarioComum usuario;
     private String codigoBarras;
     private double valorConta;
-    private LocalDate dataPagamento;
 
     /**
      * Realiza o pagamento da conta de luz utilizando o saldo da carteira
@@ -27,7 +25,6 @@ public class ContaLuz {
     public boolean pagarConta(Carteira carteira) {
         if (carteira.getValorReal() >= valorConta) {
             carteira.setValorReal(carteira.getValorReal() - valorConta);
-            setDataPagamento(LocalDate.now());
             return true;
         } else {
             return false;
@@ -50,14 +47,6 @@ public class ContaLuz {
         this.valorConta = valorConta;
     }
 
-    public LocalDate getDataPagamento() {
-        return dataPagamento;
-    }
-
-    public void setDataPagamento(LocalDate dataPagamento) {
-        this.dataPagamento = dataPagamento;
-    }
-
     public String getCodigoBarras() {
         return codigoBarras;
     }
@@ -66,11 +55,4 @@ public class ContaLuz {
         this.codigoBarras = codigoBarras;
     }
 
-    public UsuarioComum getUsuario() {
-        return usuario;
-    }
-
-    public void setUsuario(UsuarioComum usuario) {
-        this.usuario = usuario;
-    }
 }

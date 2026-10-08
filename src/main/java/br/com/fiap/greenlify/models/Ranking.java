@@ -1,6 +1,8 @@
 package br.com.fiap.greenlify.models;
 
 import br.com.fiap.greenlify.dao.*;
+import br.com.fiap.greenlify.enums.StatusRankingEnum;
+import br.com.fiap.greenlify.enums.TipoRankingEnum;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -17,6 +19,8 @@ public class Ranking {
     private int idRanking;
     private LocalDate dataInicio;
     private LocalDate dataFim;
+    private TipoRankingEnum tipo;
+    private StatusRankingEnum status;
 
     /**
      * Calcula o ranking de usuários com base na quantidade de pontos
@@ -217,5 +221,21 @@ public class Ranking {
 
     public void setDataInicio(LocalDate dataInicio) {
         this.dataInicio = dataInicio;
+    }
+
+    public TipoRankingEnum getTipo() {
+        return tipo;
+    }
+
+    public void setTipo(TipoRankingEnum tipo) {
+        this.tipo = tipo;
+    }
+
+    public StatusRankingEnum getStatus() {
+        return status;
+    }
+
+    public void setStatus(StatusRankingEnum status) {
+        this.status = status;
     }
 }

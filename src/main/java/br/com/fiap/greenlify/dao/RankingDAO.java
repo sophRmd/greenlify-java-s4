@@ -27,11 +27,13 @@ public class RankingDAO {
         PreparedStatement ps = null;
 
         try {
-            String sql = "INSERT INTO Ranking (id_ranking, dt_inicio, dt_fim) VALUES (?, ?, ?)";
+            String sql = "INSERT INTO Ranking (id_ranking, ds_tipo, dt_inicio, dt_fim, ds_status) VALUES (?, ?, ?, ?, ?)";
             ps = conexao.prepareStatement(sql);
             ps.setInt(1, ranking.getIdRanking());
-            ps.setDate(2, Date.valueOf(ranking.getDataInicio()));
-            ps.setDate(3, Date.valueOf(ranking.getDataFim()));
+            ps.setString(2, String.valueOf(ranking.getTipo()));
+            ps.setDate(3, Date.valueOf(ranking.getDataInicio()));
+            ps.setDate(4, Date.valueOf(ranking.getDataFim()));
+            ps.setString(5, String.valueOf(ranking.getStatus()));
 
             ps.executeUpdate();
             ps.close();
@@ -59,11 +61,13 @@ public class RankingDAO {
         PreparedStatement ps = null;
 
         try {
-            String sql = "UPDATE Ranking SET dt_inicio = ?, dt_fim = ? WHERE id_ranking = ?";
+            String sql = "UPDATE Ranking SET ds_tipo = ?, dt_inicio = ?, dt_fim = ?, ds_status = ? WHERE id_ranking = ?";
             ps = conexao.prepareStatement(sql);
-            ps.setDate(1, Date.valueOf(ranking.getDataInicio()));
-            ps.setDate(2, Date.valueOf(ranking.getDataFim()));
-            ps.setInt(3, ranking.getIdRanking());
+            ps.setString(1, String.valueOf(ranking.getTipo()));
+            ps.setDate(2, Date.valueOf(ranking.getDataInicio()));
+            ps.setDate(3, Date.valueOf(ranking.getDataFim()));
+            ps.setString(4, String.valueOf(ranking.getStatus()));
+            ps.setInt(5, ranking.getIdRanking());
 
             ps.executeUpdate();
             ps.close();

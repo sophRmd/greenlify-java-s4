@@ -28,17 +28,15 @@ public class GrupoDAO {
         PreparedStatement ps = null;
 
         try {
-            String sql = "INSERT INTO Grupo (nm_grupo, dt_criacao, nr_limite_usuarios, nr_status_grupo) " +
+            String sql = "INSERT INTO Grupo (nm_grupo, dt_criacao, nr_status_grupo) " +
                     "VALUES (?, ?, ?, ?)";
             ps = conexao.prepareStatement(sql, new String[]{"ID_GRUPO"});
             ps.setString(1, grupo.getNome());
             ps.setDate(2, Date.valueOf(String.valueOf(grupo.getDataCriacao())));
-            ps.setInt(3, grupo.getLimiteUsuarios());
-            ps.setInt(4, grupo.getStatusGrupo());
+            ps.setInt(3, grupo.getStatusGrupo());
 
             ps.executeUpdate();
 
-            // Recupera o id_grupo gerado automaticamente (IDENTITY) e preenche no objeto
             ResultSet rsGerado = ps.getGeneratedKeys();
             if (rsGerado.next()) {
                 grupo.setIdGrupo(rsGerado.getInt(1));
@@ -70,12 +68,12 @@ public class GrupoDAO {
         PreparedStatement ps = null;
 
         try {
-            String sql = "UPDATE Grupo SET nm_grupo = ?, dt_criacao = ?, nr_limite_usuarios = ?, nr_status_grupo = ? " +
+            String sql = "UPDATE Grupo SET nm_grupo = ?, dt_criacao = ?, nr_usuarios = ?, nr_status_grupo = ? " +
                     "WHERE id_grupo = ?";
             ps = conexao.prepareStatement(sql);
             ps.setString(1, grupo.getNome());
             ps.setDate(2, Date.valueOf(String.valueOf(grupo.getDataCriacao())));
-            ps.setInt(3, grupo.getLimiteUsuarios());
+            ps.setInt(3, grupo.getQtdUsuarios());
             ps.setInt(4, grupo.getStatusGrupo());
             ps.setInt(5, grupo.getIdGrupo());
 
@@ -145,7 +143,7 @@ public class GrupoDAO {
                 grupo.setIdGrupo(rs.getInt(1));
                 grupo.setNome(rs.getString(2));
                 grupo.setDataCriacao(rs.getDate(3).toLocalDate());
-                grupo.setLimiteUsuarios(rs.getInt(4));
+                grupo.setQtdUsuarios(rs.getInt(4));
                 grupo.setStatusGrupo(rs.getInt(5));
             }
 
@@ -185,7 +183,7 @@ public class GrupoDAO {
                 grupo.setIdGrupo(rs.getInt(1));
                 grupo.setNome(rs.getString(2));
                 grupo.setDataCriacao(rs.getDate(3).toLocalDate());
-                grupo.setLimiteUsuarios(rs.getInt(4));
+                grupo.setQtdUsuarios(rs.getInt(4));
                 grupo.setStatusGrupo(rs.getInt(5));
 
                 lista.add(grupo);

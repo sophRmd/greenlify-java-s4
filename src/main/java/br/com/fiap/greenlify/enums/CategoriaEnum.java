@@ -7,5 +7,6 @@ public enum CategoriaEnum {
     ENERGIA,
     MOBILIDADE,
     CONSUMO_CONSCIENTE,
-    IMPACTO_SOCIAL
+    IMPACTO_SOCIAL,
+    GERAL
 }

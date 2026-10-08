@@ -9,6 +9,7 @@ public class Recompensa {
 
     private int idRecompensa;
     private int bonusPercentual;
+    private int bonusPontos;
     private String descricao;
 
     public int getIdRecompensa() {
@@ -33,5 +34,13 @@ public class Recompensa {
 
     public void setDescricao(String descricao) {
         this.descricao = descricao;
+    }
+
+    public int getBonusPontos() {
+        return bonusPontos;
+    }
+
+    public void setBonusPontos(int bonusPontos) {
+        this.bonusPontos = bonusPontos;
     }
 }

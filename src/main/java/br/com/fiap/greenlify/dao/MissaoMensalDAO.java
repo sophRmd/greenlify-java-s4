@@ -60,12 +60,11 @@ public class MissaoMensalDAO {
             }
             rsGerado.close();
 
-            psMensal = conexao.prepareStatement("INSERT INTO Missao_Mensal (id_missao, nr_meta_missoes, nr_progresso_missoes, dt_inicio, dt_fim) VALUES (?, ?, ?, ?, ?)");
+            psMensal = conexao.prepareStatement("INSERT INTO Missao_Mensal (id_missao, nr_meta_missoes, dt_inicio, dt_fim) VALUES (?, ?, ?, ?)");
             psMensal.setInt(1, missao.getIdMissao());
             psMensal.setInt(2, mensal.getMeta());
-            psMensal.setInt(3, mensal.getProgressoAtual());
-            psMensal.setDate(4, Date.valueOf(mensal.getDataInicio()));
-            psMensal.setDate(5, Date.valueOf(mensal.getDataFim()));
+            psMensal.setDate(3, Date.valueOf(mensal.getDataInicio()));
+            psMensal.setDate(4, Date.valueOf(mensal.getDataFim()));
             psMensal.executeUpdate();
 
             conexao.commit();
@@ -125,12 +124,11 @@ public class MissaoMensalDAO {
             psMissao.setInt(7, missao.getIdMissao());
             psMissao.executeUpdate();
 
-            psMensal = conexao.prepareStatement("UPDATE Missao_Mensal SET nr_meta_missoes = ?, nr_progresso_missoes = ?, dt_inicio = ?, dt_fim = ? WHERE id_missao = ?");
+            psMensal = conexao.prepareStatement("UPDATE Missao_Mensal SET nr_meta_missoes = ?, dt_inicio = ?, dt_fim = ? WHERE id_missao = ?");
             psMensal.setInt(1, mensal.getMeta());
-            psMensal.setInt(2, mensal.getProgressoAtual());
-            psMensal.setDate(3, Date.valueOf(mensal.getDataInicio()));
-            psMensal.setDate(4, Date.valueOf(mensal.getDataFim()));
-            psMensal.setInt(5, missao.getIdMissao());
+            psMensal.setDate(2, Date.valueOf(mensal.getDataInicio()));
+            psMensal.setDate(3, Date.valueOf(mensal.getDataFim()));
+            psMensal.setInt(4, missao.getIdMissao());
             psMensal.executeUpdate();
 
             conexao.commit();
@@ -242,12 +240,11 @@ public class MissaoMensalDAO {
             ResultSet rsMensal = psMensal.executeQuery();
             if (rsMensal.next()) {
                 mensal.setMeta(rsMensal.getInt(2));
-                mensal.setProgressoAtual(rsMensal.getInt(3));
-                if (rsMensal.getDate(4) != null) {
-                    mensal.setDataInicio(rsMensal.getDate(4).toLocalDate());
+                if (rsMensal.getDate(3) != null) {
+                    mensal.setDataInicio(rsMensal.getDate(3).toLocalDate());
                 }
-                if (rsMensal.getDate(5) != null) {
-                    mensal.setDataFim(rsMensal.getDate(5).toLocalDate());
+                if (rsMensal.getDate(4) != null) {
+                    mensal.setDataFim(rsMensal.getDate(4).toLocalDate());
                 }
             }
             rsMensal.close();

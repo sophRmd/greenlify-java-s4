@@ -57,15 +57,13 @@ public class MissaoContinuaDAO {
             }
             rsGerado.close();
 
-            psContinua = conexao.prepareStatement("INSERT INTO Missao_Continua (id_missao, nr_limite_realizacoes, nr_tentativas_usuario, nr_progresso_atual, ds_tipo_metrica," +
-                    "vl_metrica, id_pontuacao) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            psContinua = conexao.prepareStatement("INSERT INTO Missao_Continua (id_missao, nr_limite_realizacoes, ds_tipo_metrica," +
+                    "vl_metrica, id_pontuacao) VALUES (?, ?, ?, ?, ?)");
             psContinua.setInt(1, missao.getIdMissao());
             psContinua.setInt(2, continua.getLimiteRealizacoes());
-            psContinua.setInt(3, continua.getTentativasUsuario());
-            psContinua.setDouble(4, continua.getValorProgresso());
-            psContinua.setString(5, continua.getTipoMetrica().toString());
-            psContinua.setInt(6, continua.getValorMetrica());
-            psContinua.setInt(7, pontuacao.getIdPontuacao());
+            psContinua.setString(3, continua.getTipoMetrica().toString());
+            psContinua.setInt(4, continua.getValorMetrica());
+            psContinua.setInt(5, pontuacao.getIdPontuacao());
             psContinua.executeUpdate();
 
             conexao.commit();
@@ -120,15 +118,13 @@ public class MissaoContinuaDAO {
             psMissao.setInt(7, missao.getIdMissao());
             psMissao.executeUpdate();
 
-            psContinua = conexao.prepareStatement("UPDATE Missao_continua SET nr_limite_realizacoes = ?, nr_tentativas_usuario = ?, nr_progresso_atual = ?, " +
+            psContinua = conexao.prepareStatement("UPDATE Missao_continua SET nr_limite_realizacoes = ?, " +
                     "ds_tipo_metrica = ?, vl_metrica = ?, id_pontuacao = ? WHERE id_missao = ?");
             psContinua.setInt(1, continua.getLimiteRealizacoes());
-            psContinua.setInt(2, continua.getTentativasUsuario());
-            psContinua.setDouble(3, continua.getValorProgresso());
-            psContinua.setString(4, continua.getTipoMetrica().toString());
-            psContinua.setInt(5, continua.getValorMetrica());
-            psContinua.setInt(6, continua.getIdPontuacao());
-            psContinua.setInt(7, continua.getIdMissao());
+            psContinua.setString(2, continua.getTipoMetrica().toString());
+            psContinua.setInt(3, continua.getValorMetrica());
+            psContinua.setInt(4, continua.getIdPontuacao());
+            psContinua.setInt(5, continua.getIdMissao());
             psContinua.executeUpdate();
 
             conexao.commit();
@@ -240,11 +236,9 @@ public class MissaoContinuaDAO {
             ResultSet rsContinua = psContinua.executeQuery();
             if (rsContinua.next()) {
                 continua.setLimiteRealizacoes(rsContinua.getInt(2));
-                continua.setTentativasUsuario(rsContinua.getInt(3));
-                continua.setValorProgresso(rsContinua.getDouble(4));
-                continua.setTipoMetrica(TipoMetricaEnum.valueOf(rsContinua.getString(5)));
-                continua.setValorMetrica(rsContinua.getInt(6));
-                continua.setIdPontuacao(rsContinua.getInt(7));
+                continua.setTipoMetrica(TipoMetricaEnum.valueOf(rsContinua.getString(3)));
+                continua.setValorMetrica(rsContinua.getInt(4));
+                continua.setIdPontuacao(rsContinua.getInt(5));
             }
             rsContinua.close();
             psContinua.close();

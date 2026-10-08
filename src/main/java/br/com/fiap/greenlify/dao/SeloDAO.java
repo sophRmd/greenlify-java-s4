@@ -28,7 +28,7 @@ public class SeloDAO{
         PreparedStatement ps = null;
 
         try {
-            String sql = "INSERT INTO Selo (id_selo, nm_selo, vl_vale_entrega, nr_credito_carbono, nr_pontos_necessarios) " +
+            String sql = "INSERT INTO Selo (id_selo, nm_selo, vl_vale_energia, nr_credito_carbono, nr_pontos_necessarios) " +
                     "VALUES (?, ?, ?, ?, ?)";
             ps = conexao.prepareStatement(sql);
             ps.setInt(1, selo.getIdSelo());
@@ -63,7 +63,7 @@ public class SeloDAO{
         PreparedStatement ps = null;
 
         try {
-            String sql = "UPDATE Selo SET nm_selo = ?, vl_vale_entrega = ?, nr_credito_carbono = ?, nr_pontos_necessarios = ? " +
+            String sql = "UPDATE Selo SET nm_selo = ?, vl_vale_energia = ?, nr_credito_carbono = ?, nr_pontos_necessarios = ? " +
                     "WHERE id_selo = ?";
             ps = conexao.prepareStatement(sql);
             ps.setString(1, selo.getNome());

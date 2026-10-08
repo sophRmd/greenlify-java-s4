@@ -30,17 +30,13 @@ public class PerfilSustentavelDAO {
         PreparedStatement ps = null;
 
         try {
-            String sql = "INSERT INTO Perfil_Sustentavel (id_perfil, nr_xp, nr_missoes_concluidas, nr_agua_economizada, nr_energia_economizada, nr_carbono_economizada, id_usuario, id_nivel) " +
+            String sql = "INSERT INTO Perfil_Sustentavel (id_perfil, nr_xp, id_usuario, id_nivel) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             ps = conexao.prepareStatement(sql);
             ps.setInt(1, perfil.getUsuario().getIdUsuario());
             ps.setInt(2, perfil.getXpSustentavel());
-            ps.setInt(3, perfil.getTotalMissoesConcluidas());
-            ps.setDouble(4, perfil.getTotalAguaEconomizada());
-            ps.setDouble(5, perfil.getTotalEnergiaEconomizada());
-            ps.setDouble(6, perfil.getTotalCarbonoEconomizado());
-            ps.setInt(7, perfil.getUsuario().getIdUsuario());
-            ps.setInt(8, perfil.getNivel().getIdNivel());
+            ps.setInt(3, perfil.getUsuario().getIdUsuario());
+            ps.setInt(4, perfil.getNivel().getIdNivel());
 
             ps.executeUpdate();
             ps.close();

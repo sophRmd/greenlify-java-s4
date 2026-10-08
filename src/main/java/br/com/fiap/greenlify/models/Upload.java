@@ -20,6 +20,7 @@ public class Upload {
     private LocalDate dataAnalise;
     private String arquivo;
     private String analise;
+    private int confiancaDuplicidade;
     private Missao missao;
     private UsuarioComum usuario;
 
@@ -186,5 +187,13 @@ public class Upload {
 
     public void setUsuario(UsuarioComum usuario) {
         this.usuario = usuario;
+    }
+
+    public int getConfiancaDuplicidade() {
+        return confiancaDuplicidade;
+    }
+
+    public void setConfiancaDuplicidade(int confiancaDuplicidade) {
+        this.confiancaDuplicidade = confiancaDuplicidade;
     }
 }

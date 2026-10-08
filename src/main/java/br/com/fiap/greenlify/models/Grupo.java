@@ -11,7 +11,7 @@ public class Grupo {
     private int idGrupo;
     private String nome;
     private LocalDate dataCriacao;
-    private int limiteUsuarios;
+    private int qtdUsuarios;
     private int statusGrupo;
 
     @Override
@@ -19,7 +19,7 @@ public class Grupo {
         return "\n\nID: " + idGrupo +
                 "\nNome: " + nome +
                 "\nData de Criacao :" + dataCriacao +
-                "\nLimite de usuarios: " + limiteUsuarios +
+                "\nQuantidade de usuarios: " + qtdUsuarios +
                 "\nStatus do grupo: " + statusGrupo;
     }
 
@@ -47,12 +47,12 @@ public class Grupo {
         this.dataCriacao = dataCriacao;
     }
 
-    public int getLimiteUsuarios() {
-        return limiteUsuarios;
+    public int getQtdUsuarios() {
+        return qtdUsuarios;
     }
 
-    public void setLimiteUsuarios(int limiteUsuarios) {
-        this.limiteUsuarios = limiteUsuarios;
+    public void setQtdUsuarios(int qtdUsuarios) {
+        this.qtdUsuarios = qtdUsuarios;
     }
 
     public int getStatusGrupo() {

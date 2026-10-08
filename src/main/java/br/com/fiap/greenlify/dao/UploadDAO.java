@@ -28,7 +28,7 @@ public class UploadDAO {
         PreparedStatement psUpload = null;
 
         try {
-            String sql = "INSERT INTO Upload (ds_status, dt_envio, dt_analise, ds_arquivo, ds_analise, id_usuario, id_missao) " +
+            String sql = "INSERT INTO Upload (ds_status, dt_envio, dt_analise, ds_arquivo, ds_analise, nr_confianca_duplicidade, id_usuario, id_missao) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
             psUpload = conexao.prepareStatement(sql, new String[]{"ID_UPLOAD"});
             psUpload.setString(1, upload.getStatus().toString());
@@ -36,8 +36,9 @@ public class UploadDAO {
             psUpload.setDate(3, Date.valueOf(upload.getDataAnalise()));
             psUpload.setString(4, upload.getArquivo());
             psUpload.setString(5, upload.getAnalise());
-            psUpload.setInt(6, upload.getUsuario().getIdUsuario());
-            psUpload.setInt(7, upload.getMissao().getIdMissao());
+            psUpload.setInt(6, upload.getConfiancaDuplicidade());
+            psUpload.setInt(7, upload.getUsuario().getIdUsuario());
+            psUpload.setInt(8, upload.getMissao().getIdMissao());
 
             psUpload.executeUpdate();
 
