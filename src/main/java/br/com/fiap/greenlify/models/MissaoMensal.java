@@ -8,16 +8,13 @@ import java.time.LocalDate;
  * atingida dentro desse período.
  */
 public class MissaoMensal extends Missao {
-
-    private int idMissao;
     private int meta;
     private LocalDate dataInicio;
     private LocalDate dataFim;
 
     @Override
     public String toString() {
-        return "\n\nID: " + getIdMissao() +
-                "\nNome: " + getNome() +
+        return  "\nNome: " + getNome() +
                 "\nDescrição: " + getDescricao() +
                 "\nComo comprovar: " + getComoComprovar() +
                 "\nRequisitos: " + getRequisitos() +
@@ -62,15 +59,5 @@ public class MissaoMensal extends Missao {
 
     public void setMeta(int meta) {
         this.meta = meta;
-    }
-
-    @Override
-    public int getIdMissao() {
-        return idMissao;
-    }
-
-    @Override
-    public void setIdMissao(int idMissao) {
-        this.idMissao = idMissao;
     }
 }

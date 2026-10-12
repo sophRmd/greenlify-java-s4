@@ -15,7 +15,7 @@ public class MissaoContinua extends Missao {
     private int limiteRealizacoes;
     private TipoMetricaEnum tipoMetrica;
     private int valorMetrica;
-    private int idPontuacao;
+    private Pontuacao pontuacao;
 
     /**
      * Cria uma missão contínua vazia, já definindo o tipo da missão como
@@ -36,12 +36,12 @@ public class MissaoContinua extends Missao {
      * @param requisitos       requisitos necessários para realizar a missão
      * @param categoria        categoria da missão
      * @param limiteRealizacoes número máximo de vezes que a missão pode ser realizada
-     * @param idPontuacao      identificador da pontuação associada à missão
+     * @param pontuacao      identificador da pontuação associada à missão
      * @param tipoMetrica      tipo de métrica utilizada para medir o progresso
      * @param valorMetrica     valor de referência da métrica
      */
     public MissaoContinua(int idMissao, String nome, String descricao, String comoComprovar, String requisitos,
-                          CategoriaEnum categoria, int limiteRealizacoes, int idPontuacao, double valorProgresso,
+                          CategoriaEnum categoria, int limiteRealizacoes, Pontuacao pontuacao, double valorProgresso,
                           TipoMetricaEnum tipoMetrica, int valorMetrica) {
 
         setIdMissao(idMissao);
@@ -53,7 +53,7 @@ public class MissaoContinua extends Missao {
         setTipoMissao(TipoMissaoEnum.MISSAO_CONTINUA);
 
         this.limiteRealizacoes = limiteRealizacoes;
-        this.idPontuacao = idPontuacao;
+        this.pontuacao = pontuacao;
         this.tipoMetrica = tipoMetrica;
         this.valorMetrica = valorMetrica;
     }
@@ -61,7 +61,7 @@ public class MissaoContinua extends Missao {
     @Override
     public String toString() {
         PontuacaoDAO pontuacaoDAO = new PontuacaoDAO();
-        Pontuacao pont = pontuacaoDAO.buscarPorId(idPontuacao);
+        Pontuacao pont = pontuacaoDAO.buscarPorId(pontuacao.getIdPontuacao());
 
         if (pont != null) {
             return "\n\nID: " + getIdMissao() +
@@ -115,11 +115,11 @@ public class MissaoContinua extends Missao {
         this.valorMetrica = valorMetrica;
     }
 
-    public int getIdPontuacao() {
-        return idPontuacao;
+    public Pontuacao getPontuacao() {
+        return pontuacao;
     }
 
-    public void setIdPontuacao(int idPontuacao) {
-        this.idPontuacao = idPontuacao;
+    public void setPontuacao(Pontuacao pontuacao) {
+        this.pontuacao = pontuacao;
     }
 }
