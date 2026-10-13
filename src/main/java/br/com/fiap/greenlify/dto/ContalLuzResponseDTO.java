@@ -4,7 +4,6 @@ import java.time.LocalDate;
 
 public record ContalLuzResponseDTO(
         String codigoBarras,
-        double valorConta,
-        LocalDate dataPagamento
+        double valorConta
 ) {
 }

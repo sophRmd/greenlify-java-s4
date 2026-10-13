@@ -1,54 +1,82 @@
 package br.com.fiap.greenlify.service;
 
 import br.com.fiap.greenlify.dao.ContaLuzDAO;
-import br.com.fiap.greenlify.models.Carteira;
+import br.com.fiap.greenlify.dto.ContaLuzRequestDTO;
+import br.com.fiap.greenlify.dto.ContalLuzResponseDTO;
+import br.com.fiap.greenlify.mapper.ContaLuzMapper;
 import br.com.fiap.greenlify.models.ContaLuz;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class ContaLuzService {
+
     private final ContaLuzDAO contaLuzDAO;
-    private final Carteira carteira;
 
-    public ContaLuzService(){
+    public ContaLuzService() {
         this.contaLuzDAO = new ContaLuzDAO();
-        this.carteira = new Carteira();
     }
 
-    public void cadastrar(ContaLuz conta){
-        if(conta.getCodigoBarras() == null || conta.getCodigoBarras().isBlank()){
-            System.out.println("ERRO: Código de barras não pode ser vazio.");
-            throw new IllegalArgumentException("O código de barras não pode ser vazio.");
-        }
-        if(conta.getValorConta() <= 0){
-            System.out.println("ERRO: A conta deve possuir um valor positivo.");
-            throw new IllegalArgumentException("A conta a ser paga deve possuir um valor positivo.");
-        }
-        if(conta.getValorConta() > carteira.getValorReal()){
-            System.out.println("ERRO: Valor da conta maior que o saldo.");
-            throw new IllegalArgumentException("Não é possível pagar conta de valor maior que o de saldo.");
-        }
+    public List<ContalLuzResponseDTO> listar() {
+        return contaLuzDAO.listar()
+                .stream()
+                .map(ContaLuzMapper::toDto)
+                .toList();
+    }
+
+    public ContalLuzResponseDTO buscarPorId(int id) {
+        var conta = contaLuzDAO.buscarPorId(id);
+        if (conta == null)
+            throw new IllegalArgumentException("Conta de luz não encontrada");
+        return ContaLuzMapper.toDto(conta);
+    }
+
+    public void cadastrar(ContaLuzRequestDTO dto) {
+        validar(dto);
+
+        ContaLuz conta = ContaLuzMapper.dtoToEntity(dto);
+        // O DAO insere o id explicitamente e o DTO não o carrega,
+        // então o próximo id é calculado a partir das contas existentes.
+        conta.setIdContaLuz(proximoId());
         contaLuzDAO.cadastrar(conta);
-
     }
 
-    public List<ContaLuz> listar(){
-        return contaLuzDAO.listar();
+    public void atualizar(int id, ContaLuzRequestDTO dto) {
+        if (contaLuzDAO.buscarPorId(id) == null)
+            throw new IllegalArgumentException("Conta de luz não encontrada");
+
+        validar(dto);
+
+        // O DTO não carrega o id, então ele vem da URL.
+        ContaLuz conta = ContaLuzMapper.dtoToEntity(dto);
+        conta.setIdContaLuz(id);
+        contaLuzDAO.alterar(conta);
     }
 
-    public List<ContaLuz> listarPorUsuario(int id) {
-        var contasLuz = listar();
-        List<ContaLuz> contas = new ArrayList<>();
-        for (ContaLuz c : contasLuz) {
-            if (c.getUsuario() != null && c.getUsuario().getIdUsuario() == id) {
-                contas.add(c);
-            }
+    public void excluir(int id) {
+        if (contaLuzDAO.buscarPorId(id) == null)
+            throw new IllegalArgumentException("Conta de luz não encontrada");
+
+        contaLuzDAO.excluir(id);
+    }
+
+    private void validar(ContaLuzRequestDTO dto) {
+        if (dto.codigoBarras() == null || dto.codigoBarras().isBlank()) {
+            System.out.println("ERRO: O código de barras é obrigatório");
+            throw new IllegalArgumentException("O código de barras é obrigatório.");
         }
-        return contas;
+        if (dto.valorConta() <= 0) {
+            System.out.println("ERRO: O valor da conta deve ser maior que zero.");
+            throw new IllegalArgumentException("O valor da conta deve ser maior que zero.");
+        }
     }
 
-
+    private int proximoId() {
+        return contaLuzDAO.listar()
+                .stream()
+                .mapToInt(ContaLuz::getIdContaLuz)
+                .max()
+                .orElse(0) + 1;
+    }
 }

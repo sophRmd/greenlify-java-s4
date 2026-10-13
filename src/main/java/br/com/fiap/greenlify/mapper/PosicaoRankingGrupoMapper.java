@@ -4,7 +4,7 @@ import br.com.fiap.greenlify.dto.PosicaoRankingGrupoRequestDTO;
 import br.com.fiap.greenlify.dto.PosicaoRankingGrupoResponseDTO;
 import br.com.fiap.greenlify.models.PosicaoRanking;
 
-public class PontuacaoRankingGrupoMapper {
+public class PosicaoRankingGrupoMapper {
     public static PosicaoRanking dtoToEntity (PosicaoRankingGrupoRequestDTO dto){
         PosicaoRanking posicaoRanking = new PosicaoRanking();
         posicaoRanking.setPosicao(dto.posicao());

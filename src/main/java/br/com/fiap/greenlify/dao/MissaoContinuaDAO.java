@@ -123,7 +123,7 @@ public class MissaoContinuaDAO {
             psContinua.setInt(1, continua.getLimiteRealizacoes());
             psContinua.setString(2, continua.getTipoMetrica().toString());
             psContinua.setInt(3, continua.getValorMetrica());
-            psContinua.setInt(4, continua.getIdPontuacao());
+            psContinua.setInt(4, continua.getPontuacao().getIdPontuacao());
             psContinua.setInt(5, continua.getIdMissao());
             psContinua.executeUpdate();
 
@@ -238,7 +238,7 @@ public class MissaoContinuaDAO {
                 continua.setLimiteRealizacoes(rsContinua.getInt(2));
                 continua.setTipoMetrica(TipoMetricaEnum.valueOf(rsContinua.getString(3)));
                 continua.setValorMetrica(rsContinua.getInt(4));
-                continua.setIdPontuacao(rsContinua.getInt(5));
+                continua.getPontuacao().setIdPontuacao(rsContinua.getInt(5));
             }
             rsContinua.close();
             psContinua.close();

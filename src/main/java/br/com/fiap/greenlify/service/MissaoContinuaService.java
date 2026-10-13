@@ -1,66 +1,101 @@
 package br.com.fiap.greenlify.service;
 
 import br.com.fiap.greenlify.dao.MissaoContinuaDAO;
+import br.com.fiap.greenlify.dto.MissaoContinuaCompletaRequestDTO;
+import br.com.fiap.greenlify.dto.MissaoContinuaCompletaResponseDTO;
+import br.com.fiap.greenlify.enums.TipoMissaoEnum;
+import br.com.fiap.greenlify.mapper.MissaoContinuaCompletaMapper;
 import br.com.fiap.greenlify.models.MissaoContinua;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Objects;
+
 @Service
 public class MissaoContinuaService {
+
     private final MissaoContinuaDAO missaoContinuaDAO;
 
-    public MissaoContinuaService(){
+    public MissaoContinuaService() {
         this.missaoContinuaDAO = new MissaoContinuaDAO();
     }
 
-    public void cadastrar(MissaoContinua missaoContinua){
-        if(missaoContinua.getNome() == null || missaoContinua.getNome().isBlank()){
-            System.out.println("ERRO: Nome da missão não pode ser vazio.");
-            throw new IllegalArgumentException("Nome da missão não pode ser vazio.");
+    public List<MissaoContinuaCompletaResponseDTO> listar() {
+        return missaoContinuaDAO.listar()
+                .stream()
+                .map(MissaoContinuaCompletaMapper::toDto)
+                .toList();
+    }
+
+    public MissaoContinuaCompletaResponseDTO buscarPorId(int id) {
+        return MissaoContinuaCompletaMapper.toDto(buscarExistente(id));
+    }
+
+    public void cadastrar(MissaoContinuaCompletaRequestDTO dto) {
+        validar(dto);
+
+        MissaoContinua missao = MissaoContinuaCompletaMapper.dtoToEntity(dto);
+        // O mapper não preenche o tipo, e o DAO grava missao.getTipoMissao().toString().
+        missao.setTipoMissao(TipoMissaoEnum.MISSAO_CONTINUA);
+
+        // MissaoContinua é usada como Missao e como MissaoContinua; a pontuação vem do DTO.
+        missaoContinuaDAO.cadastrarMissao(missao, missao, missao.getPontuacao());
+    }
+
+    public void atualizar(int id, MissaoContinuaCompletaRequestDTO dto) {
+        buscarExistente(id);
+        validar(dto);
+
+        // O DTO não carrega o id, então ele vem da URL.
+        MissaoContinua missao = MissaoContinuaCompletaMapper.dtoToEntity(dto);
+        missao.setIdMissao(id);
+        missao.setTipoMissao(TipoMissaoEnum.MISSAO_CONTINUA);
+        // O UPDATE do DAO usa continua.getIdPontuacao().
+        missao.getPontuacao().setIdPontuacao(missao.getPontuacao().getIdPontuacao());
+
+        missaoContinuaDAO.alterar(missao, missao);
+    }
+
+    public void excluir(int id) {
+        MissaoContinua existente = buscarExistente(id);
+        missaoContinuaDAO.excluir(existente);
+    }
+
+    // O DAO nunca devolve null: se o id não existe, retorna um objeto com os valores padrão.
+    // Também confere o tipo, para não alterar/excluir outros tipos de missão por este endpoint.
+    private MissaoContinua buscarExistente(int id) {
+        MissaoContinua missao = missaoContinuaDAO.buscarPorId(id);
+        if (missao == null
+                || !Objects.equals(missao.getIdMissao(), id)
+                || missao.getTipoMissao() != TipoMissaoEnum.MISSAO_CONTINUA)
+            throw new IllegalArgumentException("Missão contínua não encontrada");
+        return missao;
+    }
+
+    private void validar(MissaoContinuaCompletaRequestDTO dto) {
+        if (dto.nome() == null || dto.nome().isBlank()) {
+            System.out.println("ERRO: O nome da missão é obrigatório");
+            throw new IllegalArgumentException("O nome da missão é obrigatório.");
         }
-        if(missaoContinua.getDescricao() == null || missaoContinua.getDescricao().isBlank()){
-            System.out.println("ERRO: Descrição da missão não pode ser vazia.");
-            throw new IllegalArgumentException("Descrição da missão não pode ser vazia.");
+        if (dto.categoria() == null) {
+            System.out.println("ERRO: A categoria é obrigatória");
+            throw new IllegalArgumentException("A categoria é obrigatória.");
         }
-        if(missaoContinua.getComoComprovar() == null || missaoContinua.getComoComprovar().isBlank()){
-            System.out.println("ERRO: Descrição de comprovação da missão não pode ser vazia.");
-            throw new IllegalArgumentException("Descrição de comprovação da missão não pode ser vazia.");
+        if (dto.tipoMetrica() == null) {
+            System.out.println("ERRO: O tipo de métrica é obrigatório");
+            throw new IllegalArgumentException("O tipo de métrica é obrigatório.");
         }
-        if(missaoContinua.getRequisitos() == null || missaoContinua.getRequisitos().isBlank()){
-            System.out.println("ERRO: Requisitos da missão não pode ser vazios.");
-            throw new IllegalArgumentException("Requisitos da missão não pode ser vazios.");
+        if (dto.limiteRealizacoes() <= 0) {
+            System.out.println("ERRO: O limite de realizações deve ser maior que zero.");
+            throw new IllegalArgumentException("O limite de realizações deve ser maior que zero.");
         }
-        if(missaoContinua.getCategoria() == null){
-            System.out.println("ERRO: Categoria da missão não pode ser vazia.");
-            throw new IllegalArgumentException("Categoria da mmissão não pode ser vazia.");
+        if (dto.valorMetrica() <= 0) {
+            System.out.println("ERRO: O valor da métrica deve ser maior que zero.");
+            throw new IllegalArgumentException("O valor da métrica deve ser maior que zero.");
         }
-        if(missaoContinua.getTipoMissao() == null){
-            System.out.println("ERRO: Tipo da missão não pode ser vazio.");
-            throw new IllegalArgumentException("Tipo da mmissão não pode ser vazio.");
+        if (dto.pontuacao() == null) {
+            System.out.println("ERRO: A pontuação é obrigatória");
+            throw new IllegalArgumentException("A pontuação é obrigatória.");
         }
-        if(missaoContinua.getLimiteRealizacoes() <= 0){
-            System.out.println("ERRO: Missão deve ser possível realizar pelo menos uma vez.");
-            throw new IllegalArgumentException("Missão deve ser possível realizar pelo menos uma vez.");
-        }
-        if(missaoContinua.getTentativasUsuario() <= 0){
-            System.out.println("ERRO: Usuário deve poder realizar a missão pelo menos uma vez.");
-            throw new IllegalArgumentException("Usuário deve poder realizar a missão pelo menos uma vez.");
-        }
-        if(missaoContinua.getValorProgresso() < 0){
-            System.out.println("ERRO: Valor do progresso não pode ser negativo.");
-            throw new IllegalArgumentException("Valor do progresso não pode ser negativo.");
-        }
-        if(missaoContinua.getTipoMetrica() == null){
-            System.out.println("ERRO: Tipo de métrica da missão não pode ser vazios.");
-            throw new IllegalArgumentException("Tipo de métrica da missão não pode ser vazios.");
-        }
-        if(missaoContinua.getValorMetrica() < 0){
-            System.out.println("ERRO: Valor da métrica não pode ser negativo.");
-            throw new IllegalArgumentException("Valor da métrica não pode ser negativo.");
-        }
-        if(missaoContinua.getIdPontuacao() <= 0){
-            System.out.println("ERRO: Pontuação deve ser maior que um.");
-            throw new IllegalArgumentException("Pontuação deve ser maior que um..");
-        }
-        missaoContinuaDAO.cadastrarMissao(missaoContinua);
     }
 }

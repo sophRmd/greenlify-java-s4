@@ -9,15 +9,13 @@ public class ContaLuzMapper {
         ContaLuz contaLuz = new ContaLuz();
         contaLuz.setCodigoBarras(dto.codigoBarras());
         contaLuz.setValorConta(dto.valorConta());
-        contaLuz.setDataPagamento(dto.dataPagamento());
         return contaLuz;
     }
 
     public static ContalLuzResponseDTO toDto (ContaLuz contaLuz){
         ContalLuzResponseDTO dto = new ContalLuzResponseDTO(
                 contaLuz.getCodigoBarras(),
-                contaLuz.getValorConta(),
-                contaLuz.getDataPagamento()
+                contaLuz.getValorConta()
         );
         return dto;
     }
