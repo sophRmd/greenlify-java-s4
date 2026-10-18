@@ -29,7 +29,7 @@ public class RecompensaDAO {
 
         try {
             String sql = "INSERT INTO Recompensa (id_recompensa, nr_bonus_percentual, nr_pontos_bonus, ds_recompensa) " +
-                    "VALUES (?, ?, ?)";
+                    "VALUES (?, ?, ?, ?)";
             ps = conexao.prepareStatement(sql);
             ps.setInt(1, recompensa.getIdRecompensa());
             ps.setDouble(2, recompensa.getBonusPercentual());
@@ -62,11 +62,11 @@ public class RecompensaDAO {
         PreparedStatement ps = null;
 
         try {
-            String sql = "UPDATE Recompensa SET nr_bonus_percentual = ?, nr_bonus_pontos, ds_recompensa = ? " +
+            String sql = "UPDATE Recompensa SET nr_bonus_percentual = ?, nr_pontos_bonus = ?, ds_recompensa = ? " +
                     "WHERE id_recompensa = ?";
             ps = conexao.prepareStatement(sql);
             ps.setDouble(1, recompensa.getBonusPercentual());
-            ps.setInt(2, recompensa.getBonusPercentual());
+            ps.setInt(2, recompensa.getBonusPontos());
             ps.setString(3, recompensa.getDescricao());
             ps.setInt(4, recompensa.getIdRecompensa());
 
@@ -134,7 +134,8 @@ public class RecompensaDAO {
                 recompensa = new Recompensa();
                 recompensa.setIdRecompensa(rs.getInt(1));
                 recompensa.setBonusPercentual(rs.getInt(2));
-                recompensa.setDescricao(rs.getString(3));
+                recompensa.setBonusPontos(rs.getInt(3));
+                recompensa.setDescricao(rs.getString(4));
             }
 
             rs.close();
@@ -164,6 +165,7 @@ public class RecompensaDAO {
     public List<Recompensa> listar() {
         conexao = ConnectionFactory.obterConexao();
         List<Recompensa> recompensas = new ArrayList<>();
+        List<Integer> ids = new ArrayList<>();
         PreparedStatement ps = null;
 
         try {
@@ -171,9 +173,7 @@ public class RecompensaDAO {
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
-                int idRecompensa = rs.getInt(1);
-                Recompensa recompensa = buscarPorId(idRecompensa);
-                recompensas.add(recompensa);
+                ids.add(rs.getInt(1));
             }
 
 
@@ -190,6 +190,11 @@ public class RecompensaDAO {
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+        }
+        // buscarPorId reutiliza o campo 'conexao'; por isso só é chamado depois que a
+        // conexão desta consulta foi fechada (antes, ela ficava aberta e vazava).
+        for (int id : ids) {
+            recompensas.add(buscarPorId(id));
         }
         return recompensas;
     }

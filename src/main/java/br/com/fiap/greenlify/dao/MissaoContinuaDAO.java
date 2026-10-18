@@ -238,7 +238,12 @@ public class MissaoContinuaDAO {
                 continua.setLimiteRealizacoes(rsContinua.getInt(2));
                 continua.setTipoMetrica(TipoMetricaEnum.valueOf(rsContinua.getString(3)));
                 continua.setValorMetrica(rsContinua.getInt(4));
-                continua.getPontuacao().setIdPontuacao(rsContinua.getInt(5));
+                Pontuacao pontuacao = new PontuacaoDAO().buscarPorId(rsContinua.getInt(5));
+                if (pontuacao == null) {
+                    pontuacao = new Pontuacao();
+                    pontuacao.setIdPontuacao(rsContinua.getInt(5));
+                }
+                continua.setPontuacao(pontuacao);
             }
             rsContinua.close();
             psContinua.close();
@@ -265,6 +270,7 @@ public class MissaoContinuaDAO {
     public List<MissaoContinua> listar() {
         conexao = ConnectionFactory.obterConexao();
         List<MissaoContinua> continuas = new ArrayList<>();
+        List<Integer> ids = new ArrayList<>();
         PreparedStatement psMissao = null;
 
         try {
@@ -272,9 +278,7 @@ public class MissaoContinuaDAO {
             ResultSet rsMissao = psMissao.executeQuery();
 
             while (rsMissao.next()) {
-                int idMissao = rsMissao.getInt(1);
-                MissaoContinua continua = buscarPorId(idMissao);
-                continuas.add(continua);
+                ids.add(rsMissao.getInt(1));
             }
 
             rsMissao.close();
@@ -290,6 +294,11 @@ public class MissaoContinuaDAO {
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+        }
+        // buscarPorId reutiliza o campo 'conexao'; por isso só é chamado depois que a
+        // conexão desta consulta foi fechada (antes, ela ficava aberta e vazava).
+        for (int id : ids) {
+            continuas.add(buscarPorId(id));
         }
         return continuas;
     }

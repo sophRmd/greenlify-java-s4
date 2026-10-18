@@ -1,23 +1,30 @@
 package br.com.fiap.greenlify.service;
 
 import br.com.fiap.greenlify.dao.UsuarioComumDAO;
+import br.com.fiap.greenlify.dao.MissaoMensalDAO;
 import br.com.fiap.greenlify.dao.UsuarioMissaoDAO;
 import br.com.fiap.greenlify.dto.UsuarioMissaoRequestDTO;
 import br.com.fiap.greenlify.dto.UsuarioMissaoResponseDTO;
 import br.com.fiap.greenlify.mapper.UsuarioMissaoMapper;
+import br.com.fiap.greenlify.models.MissaoMensal;
 import br.com.fiap.greenlify.models.UsuarioMissao;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
 public class UsuarioMissaoService {
     private final UsuarioMissaoDAO usuarioMissaoDAO;
     private final UsuarioComumDAO usuarioDAO;
+    private final MissaoMensalDAO missaoMensalDAO;
+    private final StreakService streakService;
 
     public UsuarioMissaoService() {
         this.usuarioMissaoDAO = new UsuarioMissaoDAO();
         this.usuarioDAO = new UsuarioComumDAO();
+        this.missaoMensalDAO = new MissaoMensalDAO();
+        this.streakService = new StreakService();
     }
 
     public UsuarioMissaoResponseDTO buscarPorId(int id) {
@@ -54,6 +61,7 @@ public class UsuarioMissaoService {
         }
 
         usuarioMissaoDAO.cadastrar(UsuarioMissaoMapper.dtoToEntity(dto));
+        registrarStreakSeConcluiuMissaoMensal(dto, new UsuarioMissao()); // progresso anterior = 0
     }
 
     public void excluir(int id) {
@@ -74,6 +82,26 @@ public class UsuarioMissaoService {
         UsuarioMissao usuarioMissao = UsuarioMissaoMapper.dtoToEntity(dto);
         usuarioMissao.setIdUsuarioMissao(id);
         usuarioMissaoDAO.alterar(usuarioMissao);
+        registrarStreakSeConcluiuMissaoMensal(dto, existente);
+    }
+
+    /**
+     * Quando o progresso de uma missão mensal atinge a meta (dentro do período
+     * da missão), registra a atividade do mês no streak do usuário.
+     */
+    private void registrarStreakSeConcluiuMissaoMensal(UsuarioMissaoRequestDTO dto, UsuarioMissao anterior) {
+        MissaoMensal mensal = missaoMensalDAO.buscarPorId(dto.idMissao());
+        if (mensal == null) {
+            return;
+        }
+        LocalDate hoje = LocalDate.now();
+        boolean noPeriodo = mensal.getDataInicio() != null && mensal.getDataFim() != null
+                && !hoje.isBefore(mensal.getDataInicio()) && !hoje.isAfter(mensal.getDataFim());
+        boolean acabouDeConcluir = anterior.getProgressoAtual() < mensal.getMeta()
+                && dto.progressoAtual() >= mensal.getMeta();
+        if (noPeriodo && acabouDeConcluir) {
+            streakService.registrarAtividade(dto.idUsuario(), hoje);
+        }
     }
 
     private void validar(UsuarioMissaoRequestDTO dto) {
@@ -96,6 +124,11 @@ public class UsuarioMissaoService {
         if (usuarioDAO.buscarPorId(dto.idUsuario()) == null) {
             System.out.println("ERRO: Usuário informado não existe.");
             throw new IllegalArgumentException("O usuário informado não existe.");
+        }
+        // O DAO nunca devolve null: se o id não existe, retorna um objeto com os valores padrão.
+        if (missaoMensalDAO.buscarPorId(dto.idMissao()).getIdMissao() != dto.idMissao()) {
+            System.out.println("ERRO: Missão informada não existe.");
+            throw new IllegalArgumentException("A missão informada não existe.");
         }
     }
 }

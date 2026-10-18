@@ -237,6 +237,7 @@ public class AdminDAO {
     public List<Admin> listar() {
         conexao = ConnectionFactory.obterConexao();
         List<Admin> usuarios = new ArrayList<>();
+        List<Integer> ids = new ArrayList<>();
         PreparedStatement ps = null;
 
         try {
@@ -244,9 +245,7 @@ public class AdminDAO {
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
-                int idUsuario = rs.getInt(1);
-                Admin admin = buscarPorId(idUsuario);
-                usuarios.add(admin);
+                ids.add(rs.getInt(1));
             }
 
             rs.close();
@@ -262,6 +261,11 @@ public class AdminDAO {
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+        }
+        // buscarPorId reutiliza o campo 'conexao'; por isso só é chamado depois que a
+        // conexão desta consulta foi fechada (antes, ela ficava aberta e vazava).
+        for (int id : ids) {
+            usuarios.add(buscarPorId(id));
         }
         return usuarios;
     }

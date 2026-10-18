@@ -60,7 +60,7 @@ public class MissaoMensalDAO {
             }
             rsGerado.close();
 
-            psMensal = conexao.prepareStatement("INSERT INTO Missao_Mensal (id_missao, nr_meta_missoes, dt_inicio, dt_fim) VALUES (?, ?, ?, ?)");
+            psMensal = conexao.prepareStatement("INSERT INTO Missao_Mensal (id_missao, vl_meta, dt_inicio, dt_fim) VALUES (?, ?, ?, ?)");
             psMensal.setInt(1, missao.getIdMissao());
             psMensal.setInt(2, mensal.getMeta());
             psMensal.setDate(3, Date.valueOf(mensal.getDataInicio()));
@@ -124,7 +124,7 @@ public class MissaoMensalDAO {
             psMissao.setInt(7, missao.getIdMissao());
             psMissao.executeUpdate();
 
-            psMensal = conexao.prepareStatement("UPDATE Missao_Mensal SET nr_meta_missoes = ?, dt_inicio = ?, dt_fim = ? WHERE id_missao = ?");
+            psMensal = conexao.prepareStatement("UPDATE Missao_Mensal SET vl_meta = ?, dt_inicio = ?, dt_fim = ? WHERE id_missao = ?");
             psMensal.setInt(1, mensal.getMeta());
             psMensal.setDate(2, Date.valueOf(mensal.getDataInicio()));
             psMensal.setDate(3, Date.valueOf(mensal.getDataFim()));
@@ -272,6 +272,7 @@ public class MissaoMensalDAO {
     public List<MissaoMensal> listar() {
         conexao = ConnectionFactory.obterConexao();
         List<MissaoMensal> mensais = new ArrayList<>();
+        List<Integer> ids = new ArrayList<>();
         PreparedStatement psMissao = null;
 
         try {
@@ -279,9 +280,7 @@ public class MissaoMensalDAO {
             ResultSet rsMissao = psMissao.executeQuery();
 
             while (rsMissao.next()) {
-                int idMissao = rsMissao.getInt(1);
-                MissaoMensal mensal = buscarPorId(idMissao);
-                mensais.add(mensal);
+                ids.add(rsMissao.getInt(1));
             }
 
             rsMissao.close();
@@ -297,6 +296,11 @@ public class MissaoMensalDAO {
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+        }
+        // buscarPorId reutiliza o campo 'conexao'; por isso só é chamado depois que a
+        // conexão desta consulta foi fechada (antes, ela ficava aberta e vazava).
+        for (int id : ids) {
+            mensais.add(buscarPorId(id));
         }
         return mensais;
     }

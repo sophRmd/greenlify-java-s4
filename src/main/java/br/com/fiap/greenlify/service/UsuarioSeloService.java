@@ -1,11 +1,13 @@
 package br.com.fiap.greenlify.service;
 
+import br.com.fiap.greenlify.dao.CarteiraDAO;
 import br.com.fiap.greenlify.dao.SeloDAO;
 import br.com.fiap.greenlify.dao.UsuarioComumDAO;
 import br.com.fiap.greenlify.dao.UsuarioSeloDAO;
 import br.com.fiap.greenlify.dto.UsuarioSeloRequestDTO;
 import br.com.fiap.greenlify.dto.UsuarioSeloResponseDTO;
 import br.com.fiap.greenlify.mapper.UsuarioSeloMapper;
+import br.com.fiap.greenlify.models.Carteira;
 import br.com.fiap.greenlify.models.UsuarioSelo;
 import org.springframework.stereotype.Service;
 
@@ -17,11 +19,13 @@ public class UsuarioSeloService {
     private final UsuarioSeloDAO usuarioSeloDAO;
     private final UsuarioComumDAO usuarioDAO;
     private final SeloDAO seloDAO;
+    private final CarteiraDAO carteiraDAO;
 
     public UsuarioSeloService() {
         this.usuarioSeloDAO = new UsuarioSeloDAO();
         this.usuarioDAO = new UsuarioComumDAO();
         this.seloDAO = new SeloDAO();
+        this.carteiraDAO = new CarteiraDAO();
     }
 
     public UsuarioSeloResponseDTO buscarPorId(int id) {
@@ -58,6 +62,12 @@ public class UsuarioSeloService {
         if (jaColetou) {
             System.out.println("ERRO: O usuário já coletou esse selo.");
             throw new IllegalArgumentException("O usuário já coletou esse selo.");
+        }
+        Carteira carteira = carteiraDAO.buscarPorIdUsuario(dto.idUsuario());
+        int saldo = carteira != null ? carteira.getQtdPontos() : 0;
+        if (saldo < seloDAO.buscarPorId(dto.idSelo()).getPontosNecessarios()) {
+            System.out.println("ERRO: Pontos insuficientes para coletar o selo.");
+            throw new IllegalArgumentException("Pontos insuficientes para coletar esse selo.");
         }
 
         usuarioSeloDAO.cadastrar(UsuarioSeloMapper.dtoToEntity(dto));

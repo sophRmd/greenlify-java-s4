@@ -29,11 +29,11 @@ public class UploadDAO {
 
         try {
             String sql = "INSERT INTO Upload (ds_status, dt_envio, dt_analise, ds_arquivo, ds_analise, nr_confianca_duplicidade, id_usuario, id_missao) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)";
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             psUpload = conexao.prepareStatement(sql, new String[]{"ID_UPLOAD"});
             psUpload.setString(1, upload.getStatus().toString());
             psUpload.setDate(2, Date.valueOf(upload.getDataEnvio()));
-            psUpload.setDate(3, Date.valueOf(upload.getDataAnalise()));
+            psUpload.setDate(3, upload.getDataAnalise() != null ? Date.valueOf(upload.getDataAnalise()) : null);
             psUpload.setString(4, upload.getArquivo());
             psUpload.setString(5, upload.getAnalise());
             psUpload.setInt(6, upload.getConfiancaDuplicidade());
@@ -95,14 +95,15 @@ public class UploadDAO {
                 if (rs.getString(5) != null) {
                     upload.setAnalise(rs.getString(6));
                 }
-                int idUsuario = rs.getInt(7);
+                upload.setConfiancaDuplicidade(rs.getInt(7));
+                int idUsuario = rs.getInt(8);
                 if (idUsuario > 0) {
                     UsuarioComumDAO usuarioDao = new UsuarioComumDAO();
                     UsuarioComum usuario = usuarioDao.buscarPorId(idUsuario);
                     upload.setUsuario(usuario);
                 }
 
-                int idMissao = rs.getInt(8);
+                int idMissao = rs.getInt(9);
                 if (idMissao > 0) {
                     MissaoContinuaDAO missaoDao = new MissaoContinuaDAO();
                     MissaoContinua missao = missaoDao.buscarPorId(idMissao);
@@ -155,14 +156,15 @@ public class UploadDAO {
                 upload.setArquivo(rs.getString(5));
                 upload.setAnalise(rs.getString(6));
 
-                int idUsuario = rs.getInt(7);
+                upload.setConfiancaDuplicidade(rs.getInt(7));
+                int idUsuario = rs.getInt(8);
                 if (idUsuario > 0) {
                     UsuarioComumDAO usuarioDao = new UsuarioComumDAO();
                     UsuarioComum usuario = usuarioDao.buscarPorId(idUsuario);
                     upload.setUsuario(usuario);
                 }
 
-                int idMissao = rs.getInt(8);
+                int idMissao = rs.getInt(9);
                 if (idMissao > 0) {
                     MissaoContinuaDAO missaoDao = new MissaoContinuaDAO();
                     MissaoContinua missao = missaoDao.buscarPorId(idMissao);

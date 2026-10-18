@@ -208,6 +208,7 @@ public class PontuacaoDAO {
     public List<Pontuacao> listar() {
         conexao = ConnectionFactory.obterConexao();
         List<Pontuacao> pontuacoes = new ArrayList<>();
+        List<Integer> ids = new ArrayList<>();
         PreparedStatement ps = null;
 
         try {
@@ -215,9 +216,7 @@ public class PontuacaoDAO {
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
-                int idPontuacao = rs.getInt(1);
-                Pontuacao pontuacao = buscarPorId(idPontuacao);
-                pontuacoes.add(pontuacao);
+                ids.add(rs.getInt(1));
             }
 
             rs.close();
@@ -233,6 +232,11 @@ public class PontuacaoDAO {
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+        }
+        // buscarPorId reutiliza o campo 'conexao'; por isso só é chamado depois que a
+        // conexão desta consulta foi fechada (antes, ela ficava aberta e vazava).
+        for (int id : ids) {
+            pontuacoes.add(buscarPorId(id));
         }
         return pontuacoes;
     }

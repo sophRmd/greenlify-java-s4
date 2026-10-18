@@ -19,13 +19,16 @@ public class UploadController {
         this.service = new UploadService();
     }
 
+    /** Devolve o upload gravado, já com status, parecer e confiança de duplicidade. */
     @PostMapping
-    public ResponseEntity<String> cadastrar(@RequestBody UploadRequestDTO upload) {
+    public ResponseEntity<?> cadastrar(@RequestBody UploadRequestDTO upload) {
         try {
-            service.cadastrar(upload);
-            return ResponseEntity.status(HttpStatus.CREATED).body("Upload cadastrado com sucesso!");
+            return ResponseEntity.status(HttpStatus.CREATED).body(service.cadastrar(upload));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Erro ao cadastrar o upload: " + e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao cadastrar o upload: " + e.getMessage());
         }
     }

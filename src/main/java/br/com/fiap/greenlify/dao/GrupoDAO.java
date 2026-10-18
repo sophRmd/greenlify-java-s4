@@ -29,7 +29,7 @@ public class GrupoDAO {
 
         try {
             String sql = "INSERT INTO Grupo (nm_grupo, dt_criacao, nr_status_grupo) " +
-                    "VALUES (?, ?, ?, ?)";
+                    "VALUES (?, ?, ?)";
             ps = conexao.prepareStatement(sql, new String[]{"ID_GRUPO"});
             ps.setString(1, grupo.getNome());
             ps.setDate(2, Date.valueOf(String.valueOf(grupo.getDataCriacao())));

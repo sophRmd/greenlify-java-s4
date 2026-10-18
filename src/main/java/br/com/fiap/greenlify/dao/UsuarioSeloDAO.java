@@ -187,7 +187,7 @@ public class UsuarioSeloDAO {
                 usuarioSelo.setIdUsuarioSelo(rs.getInt(1));
                 usuarioSelo.setDataColeta(rs.getDate(2).toLocalDate());
 
-                int idSelo = rs.getInt(3);
+                int idSelo = rs.getInt(4);
                 SeloDAO seloDAO = new SeloDAO();
                 Selo selo = seloDAO.buscarPorId(idSelo);
                 usuarioSelo.setSelo(selo);

@@ -1,5 +1,7 @@
 package br.com.fiap.greenlify.dao;
 
+import br.com.fiap.greenlify.enums.StatusRankingEnum;
+import br.com.fiap.greenlify.enums.TipoRankingEnum;
 import br.com.fiap.greenlify.models.Ranking;
 
 import java.sql.Connection;
@@ -17,8 +19,11 @@ import java.util.List;
 public class RankingDAO {
     private Connection conexao;
 
+    private static final String COLUNAS = "id_ranking, ds_tipo, dt_inicio, dt_fim, ds_status";
+
     /**
-     * Cadastra um novo período de ranking.
+     * Cadastra um novo período de ranking e preenche o id gerado pelo banco
+     * (coluna IDENTITY) no próprio objeto. Se a gravação falhar, o id permanece 0.
      *
      * @param ranking ranking a ser cadastrado
      */
@@ -27,15 +32,20 @@ public class RankingDAO {
         PreparedStatement ps = null;
 
         try {
-            String sql = "INSERT INTO Ranking (id_ranking, ds_tipo, dt_inicio, dt_fim, ds_status) VALUES (?, ?, ?, ?, ?)";
-            ps = conexao.prepareStatement(sql);
-            ps.setInt(1, ranking.getIdRanking());
-            ps.setString(2, String.valueOf(ranking.getTipo()));
-            ps.setDate(3, Date.valueOf(ranking.getDataInicio()));
-            ps.setDate(4, Date.valueOf(ranking.getDataFim()));
-            ps.setString(5, String.valueOf(ranking.getStatus()));
+            String sql = "INSERT INTO Ranking (ds_tipo, dt_inicio, dt_fim, ds_status) VALUES (?, ?, ?, ?)";
+            ps = conexao.prepareStatement(sql, new String[]{"ID_RANKING"});
+            ps.setString(1, String.valueOf(ranking.getTipo()));
+            ps.setDate(2, Date.valueOf(ranking.getDataInicio()));
+            ps.setDate(3, Date.valueOf(ranking.getDataFim()));
+            ps.setString(4, String.valueOf(ranking.getStatus()));
 
             ps.executeUpdate();
+
+            ResultSet rsGerado = ps.getGeneratedKeys();
+            if (rsGerado.next()) {
+                ranking.setIdRanking(rsGerado.getInt(1));
+            }
+            rsGerado.close();
             ps.close();
 
         } catch (SQLException e) {
@@ -52,9 +62,9 @@ public class RankingDAO {
     }
 
     /**
-     * Atualiza os dados de um período de ranking já cadastrado.
+     * Atualiza os dados de um período de ranking existente.
      *
-     * @param ranking ranking com os dados atualizados
+     * @param ranking ranking com os novos dados (o id define qual será atualizado)
      */
     public void alterar(Ranking ranking) {
         conexao = ConnectionFactory.obterConexao();
@@ -86,9 +96,9 @@ public class RankingDAO {
     }
 
     /**
-     * Remove um período de ranking do banco de dados.
+     * Exclui um período de ranking pelo seu identificador.
      *
-     * @param idRanking identificador do ranking a ser removido
+     * @param idRanking identificador do ranking a ser excluído
      */
     public void excluir(int idRanking) {
         conexao = ConnectionFactory.obterConexao();
@@ -125,20 +135,12 @@ public class RankingDAO {
         Ranking ranking = null;
 
         try {
-            ps = conexao.prepareStatement("SELECT * FROM Ranking WHERE id_ranking = ?");
+            ps = conexao.prepareStatement("SELECT " + COLUNAS + " FROM Ranking WHERE id_ranking = ?");
             ps.setInt(1, idRanking);
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
-                ranking = new Ranking();
-                ranking.setIdRanking(rs.getInt(1));
-
-                if (rs.getDate(2) != null) {
-                    ranking.setDataInicio(rs.getDate(2).toLocalDate());
-                }
-                if (rs.getDate(3) != null) {
-                    ranking.setDataFim(rs.getDate(3).toLocalDate());
-                }
+                ranking = mapear(rs);
             }
 
             rs.close();
@@ -159,23 +161,21 @@ public class RankingDAO {
     }
 
     /**
-     * Lista todos os períodos de ranking cadastrados no banco de dados.
+     * Lista todos os períodos de ranking cadastrados.
      *
-     * @return lista de rankings cadastrados
+     * @return lista de rankings (pode vir vazia, nunca nula)
      */
     public List<Ranking> listar() {
         conexao = ConnectionFactory.obterConexao();
-        List<Ranking> rankings = new ArrayList<>();
+        List<Ranking> lista = new ArrayList<>();
         PreparedStatement ps = null;
 
         try {
-            ps = conexao.prepareStatement("SELECT * FROM Ranking");
+            ps = conexao.prepareStatement("SELECT " + COLUNAS + " FROM Ranking ORDER BY id_ranking");
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
-                int idRanking = rs.getInt(1);
-                Ranking ranking = buscarPorId(idRanking);
-                rankings.add(ranking);
+                lista.add(mapear(rs));
             }
 
             rs.close();
@@ -192,6 +192,21 @@ public class RankingDAO {
                 e.printStackTrace();
             }
         }
-        return rankings;
+        return lista;
+    }
+
+    /** Monta o ranking a partir da linha atual (colunas lidas pelo nome). */
+    private Ranking mapear(ResultSet rs) throws SQLException {
+        Ranking ranking = new Ranking();
+        ranking.setIdRanking(rs.getInt("id_ranking"));
+        ranking.setTipo(TipoRankingEnum.valueOf(rs.getString("ds_tipo")));
+        if (rs.getDate("dt_inicio") != null) {
+            ranking.setDataInicio(rs.getDate("dt_inicio").toLocalDate());
+        }
+        if (rs.getDate("dt_fim") != null) {
+            ranking.setDataFim(rs.getDate("dt_fim").toLocalDate());
+        }
+        ranking.setStatus(StatusRankingEnum.valueOf(rs.getString("ds_status")));
+        return ranking;
     }
 }

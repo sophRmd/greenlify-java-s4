@@ -30,6 +30,18 @@ public class RankingController {
         }
     }
 
+    /** Recalcula os rankings do mês (também roda sozinho todo dia, pelo agendamento). */
+    @PostMapping("/atualizar")
+    public ResponseEntity<String> atualizar() {
+        try {
+            service.atualizarRankings();
+            return ResponseEntity.ok("Rankings atualizados com sucesso!");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao atualizar os rankings: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<RankingResponseDTO> buscarPorId(@PathVariable int id) {
         try {
@@ -37,6 +49,11 @@ public class RankingController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @GetMapping
+    public ResponseEntity<List<RankingResponseDTO>> listar() {
+        return ResponseEntity.ok(service.listar());
     }
 
     @PutMapping("/{id}")

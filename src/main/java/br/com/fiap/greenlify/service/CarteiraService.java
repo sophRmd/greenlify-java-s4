@@ -38,8 +38,15 @@ public class CarteiraService {
 
     public CarteiraResponseDTO buscarPorIdUsuario(int idUsuario) {
         var carteira = carteiraDAO.buscarPorIdUsuario(idUsuario);
-        if (carteira == null)
-            throw new IllegalArgumentException("Carteira não encontrada");
+        if (carteira == null) {
+            // a carteira só é gravada no primeiro crédito de pontos; antes disso o usuário tem 0 pts
+            UsuarioComum usuario = usuarioDAO.buscarPorId(idUsuario);
+            if (usuario == null)
+                throw new IllegalArgumentException("Carteira não encontrada");
+            carteira = new Carteira();
+            carteira.setUsuario(usuario);
+            carteira.setIdCarteira(idUsuario);
+        }
         return CarteiraMapper.toDto(carteira);
     }
 

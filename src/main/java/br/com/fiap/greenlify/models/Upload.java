@@ -69,12 +69,11 @@ public class Upload {
         }
 
         String nome = nomeArquivo.toLowerCase();
-        boolean extensaoValida = nome.endsWith(".mp4") || nome.endsWith(".mov") || nome.endsWith(".avi")
-                || nome.endsWith(".png") || nome.endsWith(".jpg") || nome.endsWith(".jpeg");
+        boolean extensaoValida = nome.endsWith(".mp4") || nome.endsWith(".mov");
 
         if (!extensaoValida) {
             this.status = StatusUploadEnum.REPROVADO;
-            this.analise = "Arquivo recusado: Extensão não permitida. Apenas arquivos MP4, MOV, AVI, PNG, JPG e JPEG são aceitos.";
+            this.analise = "Arquivo recusado: Extensão não permitida. Apenas vídeos MP4 e MOV são aceitos.";
             return null;
         }
 

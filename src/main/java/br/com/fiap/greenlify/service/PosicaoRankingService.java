@@ -1,9 +1,7 @@
 package br.com.fiap.greenlify.service;
 
 import br.com.fiap.greenlify.dao.PosicaoRankingDAO;
-import br.com.fiap.greenlify.dto.PosicaoRankingGrupoRequestDTO;
 import br.com.fiap.greenlify.dto.PosicaoRankingGrupoResponseDTO;
-import br.com.fiap.greenlify.dto.PosicaoRankingIndividualRequestDTO;
 import br.com.fiap.greenlify.dto.PosicaoRankingIndividualResponseDTO;
 import br.com.fiap.greenlify.mapper.PosicaoRankingGrupoMapper;
 import br.com.fiap.greenlify.mapper.PosicaoRankingIndividualMapper;
@@ -36,7 +34,7 @@ public class PosicaoRankingService {
      */
     public List<PosicaoRankingGrupoResponseDTO> listarGrupos() {
         int idRankingAtual = posicaoDAO.obterUltimoIdRankingGrupo();
-        return posicaoDAO.listar()
+        return posicaoDAO.listarPorRanking(idRankingAtual)
                 .stream()
                 .filter(p -> p.getGrupo() != null
                         && p.getRanking() != null
@@ -44,27 +42,6 @@ public class PosicaoRankingService {
                 .sorted(Comparator.comparingInt(PosicaoRanking::getPosicao))
                 .map(PosicaoRankingGrupoMapper::toDto)
                 .toList();
-    }
-
-    public void cadastrarGrupo(PosicaoRankingGrupoRequestDTO dto) {
-        validarComum(dto.posicao(), dto.pontuacao(), dto.idRanking() > 0);
-        if (dto.idGrupo() <= 0) {
-            System.out.println("ERRO: O grupo é obrigatório.");
-            throw new IllegalArgumentException("O grupo é obrigatório.");
-        }
-        posicaoDAO.cadastrar(PosicaoRankingGrupoMapper.dtoToEntity(dto));
-    }
-
-    public void alterarGrupo(PosicaoRankingGrupoRequestDTO dto, int id) {
-        buscarGrupoPorId(id);
-        validarComum(dto.posicao(), dto.pontuacao(), dto.idRanking() > 0);
-        if (dto.idGrupo() <= 0) {
-            System.out.println("ERRO: O grupo é obrigatório.");
-            throw new IllegalArgumentException("O grupo é obrigatório.");
-        }
-        PosicaoRanking posicao = PosicaoRankingGrupoMapper.dtoToEntity(dto);
-        posicao.setIdPosicao(id);
-        posicaoDAO.alterar(posicao);
     }
 
     // ---------- Individual ----------
@@ -82,7 +59,7 @@ public class PosicaoRankingService {
      */
     public List<PosicaoRankingIndividualResponseDTO> listarIndividuais() {
         int idRankingAtual = posicaoDAO.obterUltimoIdRankingUsuario();
-        return posicaoDAO.listar()
+        return posicaoDAO.listarPorRanking(idRankingAtual)
                 .stream()
                 .filter(p -> p.getUsuario() != null
                         && p.getRanking() != null
@@ -90,49 +67,5 @@ public class PosicaoRankingService {
                 .sorted(Comparator.comparingInt(PosicaoRanking::getPosicao))
                 .map(PosicaoRankingIndividualMapper::toDto)
                 .toList();
-    }
-
-    public void cadastrarIndividual(PosicaoRankingIndividualRequestDTO dto) {
-        validarComum(dto.posicao(), dto.pontuacao(), dto.idRanking() > 0);
-        if (dto.idUsuario() <= 0) {
-            System.out.println("ERRO: O usuário é obrigatório.");
-            throw new IllegalArgumentException("O usuário é obrigatório.");
-        }
-        posicaoDAO.cadastrar(PosicaoRankingIndividualMapper.dtoToEntity(dto));
-    }
-
-    public void alterarIndividual(PosicaoRankingIndividualRequestDTO dto, int id) {
-        buscarIndividualPorId(id);
-        validarComum(dto.posicao(), dto.pontuacao(), dto.idRanking() > 0);
-        if (dto.idUsuario() <= 0) {
-            System.out.println("ERRO: O usuário é obrigatório.");
-            throw new IllegalArgumentException("O usuário é obrigatório.");
-        }
-        PosicaoRanking posicao = PosicaoRankingIndividualMapper.dtoToEntity(dto);
-        posicao.setIdPosicao(id);
-        posicaoDAO.alterar(posicao);
-    }
-
-    public void excluir(int id) {
-        PosicaoRanking posicao = posicaoDAO.buscarPorId(id);
-        if (posicao == null) {
-            throw new IllegalArgumentException("Posição de ranking não encontrada");
-        }
-        posicaoDAO.excluir(id);
-    }
-
-    private void validarComum(int posicao, int pontuacao, boolean temRanking) {
-        if (posicao <= 0) {
-            System.out.println("ERRO: A posição deve ser maior que zero.");
-            throw new IllegalArgumentException("A posição deve ser maior que zero.");
-        }
-        if (pontuacao < 0) {
-            System.out.println("ERRO: A pontuação não pode ser negativa.");
-            throw new IllegalArgumentException("A pontuação não pode ser negativa.");
-        }
-        if (!temRanking) {
-            System.out.println("ERRO: O ranking é obrigatório.");
-            throw new IllegalArgumentException("O ranking é obrigatório.");
-        }
     }
 }

@@ -7,12 +7,8 @@ import br.com.fiap.greenlify.models.Upload;
 public class UploadMapper {
     public static Upload dtoToEntity (UploadRequestDTO dto){
         Upload upload = new Upload();
-        upload.setStatus(dto.status());
-        upload.setDataEnvio(dto.dataEnvio());
-        upload.setDataAnalise(dto.dataAnalise());
+        // status, datas, parecer e confiança são definidos pelo UploadService, nunca pelo cliente.
         upload.setArquivo(dto.arquivo());
-        upload.setAnalise(dto.analise());
-        upload.setConfiancaDuplicidade(dto.confiancaDuplicidade());
         upload.setMissao(ReferenciaMapper.missao(dto.idMissao()));
         upload.setUsuario(ReferenciaMapper.usuarioComum(dto.idUsuario()));
         return upload;

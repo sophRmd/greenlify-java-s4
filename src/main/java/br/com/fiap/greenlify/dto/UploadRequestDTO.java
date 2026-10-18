@@ -1,16 +1,13 @@
 package br.com.fiap.greenlify.dto;
 
-import br.com.fiap.greenlify.enums.StatusUploadEnum;
-import java.time.LocalDate;
+import java.util.List;
 
 public record UploadRequestDTO(
-        StatusUploadEnum status,
-        LocalDate dataEnvio,
-        LocalDate dataAnalise,
         String arquivo,
-        String analise,
-        int confiancaDuplicidade,
+        double tamanhoMB,
         int idMissao,
-        int idUsuario
+        int idUsuario,
+        String hashVideo,
+        List<FingerprintFrameRequestDTO> frames
 ) {
 }

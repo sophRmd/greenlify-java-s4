@@ -31,7 +31,7 @@ public class PerfilSustentavelDAO {
 
         try {
             String sql = "INSERT INTO Perfil_Sustentavel (id_perfil, nr_xp, id_usuario, id_nivel) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    "VALUES (?, ?, ?, ?)";
             ps = conexao.prepareStatement(sql);
             ps.setInt(1, perfil.getUsuario().getIdUsuario());
             ps.setInt(2, perfil.getXpSustentavel());
@@ -140,19 +140,19 @@ public class PerfilSustentavelDAO {
 
             if (rs.next()) {
                 perfil = new PerfilSustentavel();
-                perfil.setIdPerfilSustentavel(rs.getInt(1));
-                perfil.setXpSustentavel(rs.getInt(2));
-                perfil.setTotalMissoesConcluidas(rs.getInt(3));
-                perfil.setTotalAguaEconomizada(rs.getDouble(4));
-                perfil.setTotalEnergiaEconomizada(rs.getDouble(5));
-                perfil.setTotalCarbonoEconomizado(rs.getDouble(6));
+                perfil.setIdPerfilSustentavel(rs.getInt("id_perfil"));
+                perfil.setXpSustentavel(rs.getInt("nr_xp"));
+                perfil.setTotalMissoesConcluidas(rs.getInt("nr_missoes_concluidas"));
+                perfil.setTotalAguaEconomizada(rs.getDouble("nr_agua_economizada"));
+                perfil.setTotalEnergiaEconomizada(rs.getDouble("nr_energia_economizada"));
+                perfil.setTotalCarbonoEconomizado(rs.getDouble("nr_carbono_economizada"));
 
-                int idUsuario = rs.getInt(7);
+                int idUsuario = rs.getInt("id_usuario");
                 UsuarioComumDAO usuarioDAO = new UsuarioComumDAO();
                 UsuarioComum usuario = usuarioDAO.buscarPorId(idUsuario);
                 perfil.setUsuario(usuario);
 
-                int idNivel = rs.getInt(8);
+                int idNivel = rs.getInt("id_nivel");
                 NivelContribuicaoDAO nivelDao = new NivelContribuicaoDAO();
                 NivelContribuicao nivel = nivelDao.buscarPorId(idNivel);
                 perfil.setNivel(nivel);
@@ -191,19 +191,19 @@ public class PerfilSustentavelDAO {
 
             while (rs.next()) {
                 PerfilSustentavel perfil = new PerfilSustentavel();
-                perfil.setIdPerfilSustentavel(rs.getInt(1));
-                perfil.setXpSustentavel(rs.getInt(2));
-                perfil.setTotalMissoesConcluidas(rs.getInt(3));
-                perfil.setTotalAguaEconomizada(rs.getDouble(4));
-                perfil.setTotalEnergiaEconomizada(rs.getDouble(5));
-                perfil.setTotalCarbonoEconomizado(rs.getDouble(6));
+                perfil.setIdPerfilSustentavel(rs.getInt("id_perfil"));
+                perfil.setXpSustentavel(rs.getInt("nr_xp"));
+                perfil.setTotalMissoesConcluidas(rs.getInt("nr_missoes_concluidas"));
+                perfil.setTotalAguaEconomizada(rs.getDouble("nr_agua_economizada"));
+                perfil.setTotalEnergiaEconomizada(rs.getDouble("nr_energia_economizada"));
+                perfil.setTotalCarbonoEconomizado(rs.getDouble("nr_carbono_economizada"));
 
-                int idUsuario = rs.getInt(7);
+                int idUsuario = rs.getInt("id_usuario");
                 UsuarioComumDAO usuarioDao = new UsuarioComumDAO();
                 UsuarioComum usuario = usuarioDao.buscarPorId(idUsuario);
                 perfil.setUsuario(usuario);
 
-                int idNivel = rs.getInt(8);
+                int idNivel = rs.getInt("id_nivel");
                 NivelContribuicaoDAO nivelDao = new NivelContribuicaoDAO();
                 NivelContribuicao nivel = nivelDao.buscarPorId(idNivel);
                 perfil.setNivel(nivel);

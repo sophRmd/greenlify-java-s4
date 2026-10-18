@@ -28,7 +28,7 @@ public class SeloDAO{
         PreparedStatement ps = null;
 
         try {
-            String sql = "INSERT INTO Selo (id_selo, nm_selo, vl_vale_energia, nr_credito_carbono, nr_pontos_necessarios) " +
+            String sql = "INSERT INTO Selo (id_selo, nm_selo, vl_vale_entrega, nr_credito_carbono, nr_pontos_necessarios) " +
                     "VALUES (?, ?, ?, ?, ?)";
             ps = conexao.prepareStatement(sql);
             ps.setInt(1, selo.getIdSelo());
@@ -63,7 +63,7 @@ public class SeloDAO{
         PreparedStatement ps = null;
 
         try {
-            String sql = "UPDATE Selo SET nm_selo = ?, vl_vale_energia = ?, nr_credito_carbono = ?, nr_pontos_necessarios = ? " +
+            String sql = "UPDATE Selo SET nm_selo = ?, vl_vale_entrega = ?, nr_credito_carbono = ?, nr_pontos_necessarios = ? " +
                     "WHERE id_selo = ?";
             ps = conexao.prepareStatement(sql);
             ps.setString(1, selo.getNome());
@@ -166,6 +166,7 @@ public class SeloDAO{
     public List<Selo> listar() {
         conexao = ConnectionFactory.obterConexao();
         List<Selo> selos = new ArrayList<>();
+        List<Integer> ids = new ArrayList<>();
         PreparedStatement ps = null;
 
         try {
@@ -173,9 +174,7 @@ public class SeloDAO{
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
-                int idSelo = rs.getInt(1);
-                Selo selo = buscarPorId(idSelo);
-                selos.add(selo);
+                ids.add(rs.getInt(1));
             }
 
 
@@ -192,6 +191,11 @@ public class SeloDAO{
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+        }
+        // buscarPorId reutiliza o campo 'conexao'; por isso só é chamado depois que a
+        // conexão desta consulta foi fechada (antes, ela ficava aberta e vazava).
+        for (int id : ids) {
+            selos.add(buscarPorId(id));
         }
         return selos;
     }

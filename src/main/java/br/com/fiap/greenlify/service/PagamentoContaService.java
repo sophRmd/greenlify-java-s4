@@ -1,9 +1,12 @@
 package br.com.fiap.greenlify.service;
 
+import br.com.fiap.greenlify.dao.CarteiraDAO;
+import br.com.fiap.greenlify.dao.ContaLuzDAO;
 import br.com.fiap.greenlify.dao.PagamentoContaDAO;
 import br.com.fiap.greenlify.dto.PagamentoContaRequestDTO;
 import br.com.fiap.greenlify.dto.PagamentoContaResponseDTO;
 import br.com.fiap.greenlify.mapper.PagamentoContaMapper;
+import br.com.fiap.greenlify.models.Carteira;
 import br.com.fiap.greenlify.models.PagamentoConta;
 import org.springframework.stereotype.Service;
 
@@ -11,10 +14,17 @@ import java.util.List;
 
 @Service
 public class PagamentoContaService {
+    // Mesma taxa de conversão usada em Carteira (R$ por ponto).
+    private static final double REAIS_POR_PONTO = 0.009052;
+
     private final PagamentoContaDAO pagamentoDAO;
+    private final CarteiraDAO carteiraDAO;
+    private final ContaLuzDAO contaLuzDAO;
 
     public PagamentoContaService() {
         this.pagamentoDAO = new PagamentoContaDAO();
+        this.carteiraDAO = new CarteiraDAO();
+        this.contaLuzDAO = new ContaLuzDAO();
     }
 
     public PagamentoContaResponseDTO buscarPorId(int id) {
@@ -41,7 +51,27 @@ public class PagamentoContaService {
 
     public void cadastrar(PagamentoContaRequestDTO dto) {
         validar(dto);
-        pagamentoDAO.cadastrar(PagamentoContaMapper.dtoToEntity(dto));
+        if (contaLuzDAO.buscarPorId(dto.idContaLuz()) == null) {
+            System.out.println("ERRO: Conta de luz informada não existe.");
+            throw new IllegalArgumentException("A conta de luz informada não existe.");
+        }
+        Carteira carteira = carteiraDAO.buscarPorIdUsuario(dto.idUsuario());
+        if (carteira == null || carteira.getValorReal() < dto.valorPago()) {
+            System.out.println("ERRO: Saldo insuficiente na carteira.");
+            throw new IllegalArgumentException("Saldo insuficiente na carteira para pagar a conta.");
+        }
+
+        PagamentoConta pagamento = PagamentoContaMapper.dtoToEntity(dto);
+        pagamentoDAO.cadastrar(pagamento);
+        if (pagamento.getIdPagamento() <= 0) {
+            throw new IllegalStateException("Não foi possível gravar o pagamento.");
+        }
+
+        // Pagamento gravado: debita da carteira os pontos equivalentes ao valor pago.
+        int pontosUsados = (int) Math.ceil(dto.valorPago() / REAIS_POR_PONTO);
+        carteira.setQtdPontos(Math.max(0, carteira.getQtdPontos() - pontosUsados));
+        carteira.recalcularValorReal();
+        carteiraDAO.atualizarSaldoPontos(carteira);
     }
 
     public void excluir(int id) {

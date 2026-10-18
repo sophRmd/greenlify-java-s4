@@ -67,6 +67,22 @@ public class Streak {
         ultimaAtividade = dataConclusao;
     }
 
+    /**
+     * Zera (apenas em memória) a sequência atual quando já passou um mês inteiro sem
+     * atividade, para que uma sequência quebrada não continue sendo exibida como ativa.
+     * O banco só é atualizado na próxima atividade, que já reinicia a sequência em 1.
+     */
+    public void encerrarSeInterrompida(LocalDate hoje) {
+        if (ultimaAtividade == null) {
+            return;
+        }
+        int mesesSemAtividade = ((hoje.getYear() * 12) + hoje.getMonthValue())
+                - ((ultimaAtividade.getYear() * 12) + ultimaAtividade.getMonthValue());
+        if (mesesSemAtividade > 1) {
+            sequenciaAtual = 0;
+        }
+    }
+
     public boolean mesmoMes(LocalDate data1, LocalDate data2) {
         return data1.getYear() == data2.getYear() && data1.getMonthValue() == data2.getMonthValue();
     }

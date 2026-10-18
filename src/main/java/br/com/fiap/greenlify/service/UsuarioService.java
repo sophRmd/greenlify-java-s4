@@ -5,6 +5,7 @@ import br.com.fiap.greenlify.dao.GrupoDAO;
 import br.com.fiap.greenlify.dao.UsuarioComumDAO;
 import br.com.fiap.greenlify.dto.UsuarioCadastroRequestDTO;
 import br.com.fiap.greenlify.dto.UsuarioCadastroResponseDTO;
+import br.com.fiap.greenlify.enums.StatusContaEnum;
 import br.com.fiap.greenlify.mapper.UsuarioCadastroMapper;
 import br.com.fiap.greenlify.models.UsuarioComum;
 import org.springframework.stereotype.Service;
@@ -75,6 +76,9 @@ public class UsuarioService {
         UsuarioComum usuario = usuarioDAO.buscarPorEmailESenha(email, senha);
         if (usuario == null) {
             throw new IllegalArgumentException("Credenciais inválidas.");
+        }
+        if (usuario.getStatusConta() != StatusContaEnum.ATIVA) {
+            throw new IllegalArgumentException("Conta não está ativa.");
         }
         return UsuarioCadastroMapper.toDto(usuario);
     }

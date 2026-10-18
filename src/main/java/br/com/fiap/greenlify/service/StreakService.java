@@ -2,11 +2,12 @@ package br.com.fiap.greenlify.service;
 
 import br.com.fiap.greenlify.dao.StreakDAO;
 import br.com.fiap.greenlify.dao.UsuarioComumDAO;
-import br.com.fiap.greenlify.dto.StreakRequestDTO;
 import br.com.fiap.greenlify.dto.StreakResponseDTO;
 import br.com.fiap.greenlify.mapper.StreakMapper;
 import br.com.fiap.greenlify.models.Streak;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
 
 @Service
 public class StreakService {
@@ -23,6 +24,7 @@ public class StreakService {
         if (streak == null) {
             throw new IllegalArgumentException("Sequência não encontrada");
         }
+        streak.encerrarSeInterrompida(LocalDate.now());
         return StreakMapper.toDto(streak);
     }
 
@@ -31,31 +33,19 @@ public class StreakService {
      */
     public StreakResponseDTO buscarOuCriar(int idUsuario) {
         verificarUsuario(idUsuario);
-        return StreakMapper.toDto(streakDAO.buscarOuCriar(idUsuario));
+        Streak streak = streakDAO.buscarOuCriar(idUsuario);
+        streak.encerrarSeInterrompida(LocalDate.now());
+        return StreakMapper.toDto(streak);
     }
 
-    public void cadastrar(StreakRequestDTO dto, int idUsuario) {
+    /**
+     * Registra uma atividade mensal do usuário (missão mensal concluída),
+     * atualizando a sequência pelas regras do model {@link Streak}.
+     */
+    public void registrarAtividade(int idUsuario, LocalDate data) {
         verificarUsuario(idUsuario);
-        validar(dto);
-
-        if (streakDAO.buscarPorIdUsuario(idUsuario) != null) {
-            System.out.println("ERRO: Já existe uma sequência para esse usuário.");
-            throw new IllegalArgumentException("Já existe uma sequência para esse usuário.");
-        }
-
-        Streak streak = StreakMapper.dtoToEntity(dto);
-        streak.setIdStreak(idUsuario);
-        streakDAO.cadastrar(streak, idUsuario);
-    }
-
-    public void atualizar(StreakRequestDTO dto, int idUsuario) {
-        if (streakDAO.buscarPorIdUsuario(idUsuario) == null) {
-            throw new IllegalArgumentException("Sequência não encontrada");
-        }
-        validar(dto);
-
-        Streak streak = StreakMapper.dtoToEntity(dto);
-        streak.setIdStreak(idUsuario);
+        Streak streak = streakDAO.buscarOuCriar(idUsuario);
+        streak.registrarAtividadeMensal(data);
         streakDAO.atualizar(streak, idUsuario);
     }
 
@@ -66,26 +56,4 @@ public class StreakService {
         }
     }
 
-    private void validar(StreakRequestDTO dto) {
-        if (dto.maiorSequencia() < 0) {
-            System.out.println("ERRO: A maior sequência não pode ser negativa.");
-            throw new IllegalArgumentException("A maior sequência não pode ser negativa.");
-        }
-        if (dto.sequenciaAtual() < 0) {
-            System.out.println("ERRO: A sequência atual não pode ser negativa.");
-            throw new IllegalArgumentException("A sequência atual não pode ser negativa.");
-        }
-        if (dto.sequenciaAtual() > dto.maiorSequencia()) {
-            System.out.println("ERRO: A sequência atual não pode ser maior que a maior sequência.");
-            throw new IllegalArgumentException(
-                    "A sequência atual não pode ser maior que a maior sequência.");
-        }
-        if (dto.primeiraAtividade() != null
-                && dto.ultimaAtividade() != null
-                && dto.ultimaAtividade().isBefore(dto.primeiraAtividade())) {
-            System.out.println("ERRO: A última atividade não pode ser anterior à primeira.");
-            throw new IllegalArgumentException(
-                    "A última atividade não pode ser anterior à primeira.");
-        }
-    }
 }

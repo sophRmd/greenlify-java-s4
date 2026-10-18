@@ -2,6 +2,7 @@ package br.com.fiap.greenlify.service;
 
 import br.com.fiap.greenlify.util.ValidadorEntrada;
 import br.com.fiap.greenlify.dao.MissaoContinuaDAO;
+import br.com.fiap.greenlify.dao.PontuacaoDAO;
 import br.com.fiap.greenlify.dto.MissaoContinuaCompletaRequestDTO;
 import br.com.fiap.greenlify.dto.MissaoContinuaCompletaResponseDTO;
 import br.com.fiap.greenlify.enums.TipoMissaoEnum;
@@ -95,6 +96,10 @@ public class MissaoContinuaService {
         if (dto.idPontuacao() <= 0) {
             System.out.println("ERRO: A pontuação é obrigatória");
             throw new IllegalArgumentException("A pontuação é obrigatória.");
+        }
+        if (new PontuacaoDAO().buscarPorId(dto.idPontuacao()) == null) {
+            System.out.println("ERRO: A pontuação informada não existe");
+            throw new IllegalArgumentException("A pontuação informada não existe.");
         }
 
         // Anti-injection (SQL/HTML/path traversal) e whitelist de campos estruturados
