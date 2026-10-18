@@ -1,6 +1,6 @@
 services:
   greenlify:
-    build: .
+    build: target
     container_name: greenlify
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
