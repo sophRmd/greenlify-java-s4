@@ -30,15 +30,6 @@ public class UsuarioMissaoController {
         }
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<UsuarioMissaoResponseDTO> buscarPorId(@PathVariable int id) {
-        try {
-            return ResponseEntity.ok(service.buscarPorId(id));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
     @GetMapping
     public ResponseEntity<List<UsuarioMissaoResponseDTO>> listar() {
         return ResponseEntity.ok(service.listar());

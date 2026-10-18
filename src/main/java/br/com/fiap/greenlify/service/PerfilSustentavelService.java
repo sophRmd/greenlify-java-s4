@@ -59,11 +59,11 @@ public class PerfilSustentavelService {
     }
 
     private void validar(PerfilSustentavelRequestDTO dto) {
-        if (dto.usuario() == null) {
+        if (dto.idUsuario() <= 0) {
             System.out.println("ERRO: O usuário é obrigatório.");
             throw new IllegalArgumentException("O usuário é obrigatório.");
         }
-        if (dto.nivel() == null) {
+        if (dto.idNivel() <= 0) {
             System.out.println("ERRO: O nível de contribuição é obrigatório.");
             throw new IllegalArgumentException("O nível de contribuição é obrigatório.");
         }

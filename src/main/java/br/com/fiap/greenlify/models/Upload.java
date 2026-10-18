@@ -57,13 +57,13 @@ public class Upload {
 
         // Validação das regras de negócio
         if (nomeArquivo == null || nomeArquivo.trim().isEmpty()) {
-            this.status = StatusUploadEnum.RECUSADO;
+            this.status = StatusUploadEnum.REPROVADO;
             this.analise = "Arquivo recusado: Nome do arquivo inválido ou não informado.";
             return null;
         }
 
         if (tamanhoMB > 100.0) {
-            this.status = StatusUploadEnum.RECUSADO;
+            this.status = StatusUploadEnum.REPROVADO;
             this.analise = String.format("Arquivo recusado: Tamanho do arquivo (%.2f MB) excede o limite máximo permitido de 100 MB.", tamanhoMB);
             return null;
         }
@@ -73,7 +73,7 @@ public class Upload {
                 || nome.endsWith(".png") || nome.endsWith(".jpg") || nome.endsWith(".jpeg");
 
         if (!extensaoValida) {
-            this.status = StatusUploadEnum.RECUSADO;
+            this.status = StatusUploadEnum.REPROVADO;
             this.analise = "Arquivo recusado: Extensão não permitida. Apenas arquivos MP4, MOV, AVI, PNG, JPG e JPEG são aceitos.";
             return null;
         }

@@ -17,6 +17,7 @@ public class MissaoMensalResumidaMapper {
 
     public static MissaoMensalResumidaResponseDTO toDto (MissaoMensal missaoMensal){
         MissaoMensalResumidaResponseDTO dto = new MissaoMensalResumidaResponseDTO(
+                missaoMensal.getIdMissao(),
                 missaoMensal.getNome(),
                 missaoMensal.getDescricao(),
                 missaoMensal.getMeta(),

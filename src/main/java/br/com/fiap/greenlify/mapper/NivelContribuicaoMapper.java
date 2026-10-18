@@ -16,6 +16,7 @@ public class NivelContribuicaoMapper {
 
     public static NivelContribuicaoResponseDTO toDto (NivelContribuicao nivel){
         NivelContribuicaoResponseDTO dto = new NivelContribuicaoResponseDTO(
+                nivel.getIdNivel(),
                 nivel.getNivel(),
                 nivel.getNome(),
                 nivel.getXpMinimo(),

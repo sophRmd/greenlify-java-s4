@@ -39,11 +39,6 @@ public class RankingController {
         }
     }
 
-    @GetMapping
-    public ResponseEntity<List<RankingResponseDTO>> listar() {
-        return ResponseEntity.ok(service.listar());
-    }
-
     @PutMapping("/{id}")
     public ResponseEntity<String> alterar(@PathVariable int id,
                                           @RequestBody RankingRequestDTO objeto) {

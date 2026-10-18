@@ -39,11 +39,6 @@ public class ResgateController {
         }
     }
 
-    @GetMapping
-    public ResponseEntity<List<ResgateResponseDTO>> listar() {
-        return ResponseEntity.ok(service.listar());
-    }
-
     @PutMapping("/{id}")
     public ResponseEntity<String> alterar(@PathVariable int id,
                                           @RequestBody ResgateRequestDTO objeto) {
@@ -59,13 +54,4 @@ public class ResgateController {
         }
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluir(@PathVariable int id) {
-        try {
-            service.excluir(id);
-            return ResponseEntity.ok().build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
 }

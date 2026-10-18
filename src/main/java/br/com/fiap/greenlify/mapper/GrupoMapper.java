@@ -1,6 +1,5 @@
 package br.com.fiap.greenlify.mapper;
 
-import br.com.fiap.greenlify.dto.CarteiraResponseDTO;
 import br.com.fiap.greenlify.dto.GrupoRequestDTO;
 import br.com.fiap.greenlify.dto.GrupoResponseDTO;
 import br.com.fiap.greenlify.models.Grupo;
@@ -15,11 +14,11 @@ public class GrupoMapper {
     }
 
     public static GrupoResponseDTO toDto (Grupo grupo){
-        GrupoResponseDTO dto = new GrupoResponseDTO(
+        return new GrupoResponseDTO(
+                grupo.getIdGrupo(),
                 grupo.getNome(),
                 grupo.getDataCriacao(),
-                grupo.getStatusGrupo()
+                grupo.getQtdUsuarios()
         );
-        return dto;
     }
 }

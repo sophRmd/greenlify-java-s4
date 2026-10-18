@@ -5,6 +5,7 @@ import br.com.fiap.greenlify.enums.TipoMetricaEnum;
 import br.com.fiap.greenlify.models.Pontuacao;
 
 public record MissaoContinuaCompletaResponseDTO(
+        int idMissao,
         String nome,
         String descricao,
         String comoComprovar,

@@ -13,10 +13,10 @@ public class ContaLuzMapper {
     }
 
     public static ContalLuzResponseDTO toDto (ContaLuz contaLuz){
-        ContalLuzResponseDTO dto = new ContalLuzResponseDTO(
+        return new ContalLuzResponseDTO(
+                contaLuz.getIdContaLuz(),
                 contaLuz.getCodigoBarras(),
                 contaLuz.getValorConta()
         );
-        return dto;
     }
 }

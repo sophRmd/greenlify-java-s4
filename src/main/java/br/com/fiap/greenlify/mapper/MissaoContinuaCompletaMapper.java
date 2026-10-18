@@ -15,12 +15,13 @@ public class MissaoContinuaCompletaMapper {
         missaoContinua.setLimiteRealizacoes(dto.limiteRealizacoes());
         missaoContinua.setTipoMetrica(dto.tipoMetrica());
         missaoContinua.setValorMetrica(dto.valorMetrica());
-        missaoContinua.setPontuacao(dto.pontuacao());
+        missaoContinua.setPontuacao(ReferenciaMapper.pontuacao(dto.idPontuacao()));
         return missaoContinua;
     }
 
     public static MissaoContinuaCompletaResponseDTO toDto (MissaoContinua missaoContinua){
-        MissaoContinuaCompletaResponseDTO dto = new MissaoContinuaCompletaResponseDTO(
+        return new MissaoContinuaCompletaResponseDTO(
+                missaoContinua.getIdMissao(),
                 missaoContinua.getNome(),
                 missaoContinua.getDescricao(),
                 missaoContinua.getComoComprovar(),
@@ -31,6 +32,5 @@ public class MissaoContinuaCompletaMapper {
                 missaoContinua.getValorMetrica(),
                 missaoContinua.getPontuacao()
         );
-        return dto;
     }
 }

@@ -16,11 +16,6 @@ public class ContaLuzController {
 
     private ContaLuzService service = new ContaLuzService();
 
-    @GetMapping
-    public ResponseEntity<List<ContalLuzResponseDTO>> listar() {
-        return ResponseEntity.ok(service.listar());
-    }
-
     @GetMapping("/{id}")
     public ResponseEntity<ContalLuzResponseDTO> buscarPorId(@PathVariable int id) {
         try {
@@ -51,13 +46,4 @@ public class ContaLuzController {
         }
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluir(@PathVariable int id) {
-        try {
-            service.excluir(id);
-            return ResponseEntity.ok().build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
 }

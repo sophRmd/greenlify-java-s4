@@ -1,5 +1,6 @@
 package br.com.fiap.greenlify.service;
 
+import br.com.fiap.greenlify.util.ValidadorEntrada;
 import br.com.fiap.greenlify.dao.MissaoMensalDAO;
 import br.com.fiap.greenlify.dto.MissaoMensalCompletaRequestDTO;
 import br.com.fiap.greenlify.dto.MissaoMensalCompletaResponseDTO;
@@ -92,5 +93,11 @@ public class MissaoMensalService {
             System.out.println("ERRO: A data de fim não pode ser anterior à data de início");
             throw new IllegalArgumentException("A data de fim não pode ser anterior à data de início.");
         }
+
+        // Anti-injection (SQL/HTML/path traversal) e whitelist de campos estruturados
+        ValidadorEntrada.textoLivre("O nome da missão", dto.nome(), 200);
+        ValidadorEntrada.textoLivreOpcional("A descrição", dto.descricao(), 255);
+        ValidadorEntrada.textoLivreOpcional("Como comprovar", dto.comoComprovar(), 255);
+        ValidadorEntrada.textoLivreOpcional("Os requisitos", dto.requisitos(), 255);
     }
 }

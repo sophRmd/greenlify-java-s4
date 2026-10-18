@@ -1,5 +1,6 @@
 package br.com.fiap.greenlify.service;
 
+import br.com.fiap.greenlify.util.ValidadorEntrada;
 import br.com.fiap.greenlify.dao.GrupoDAO;
 import br.com.fiap.greenlify.dao.UsuarioComumDAO;
 import br.com.fiap.greenlify.dto.UsuarioCadastroRequestDTO;
@@ -69,6 +70,8 @@ public class UsuarioService {
         if (email == null || email.isBlank() || senha == null || senha.isBlank()) {
             throw new IllegalArgumentException("E-mail e senha são obrigatórios.");
         }
+        ValidadorEntrada.email(email);
+        ValidadorEntrada.senha(senha);
         UsuarioComum usuario = usuarioDAO.buscarPorEmailESenha(email, senha);
         if (usuario == null) {
             throw new IllegalArgumentException("Credenciais inválidas.");
@@ -101,9 +104,15 @@ public class UsuarioService {
             System.out.println("ERRO: O status da conta é obrigatório");
             throw new IllegalArgumentException("O status da conta é obrigatório.");
         }
-        if (dto.grupo() != null && grupoDAO.buscarPorId(dto.grupo().getIdGrupo()) == null) {
+        if (dto.idGrupo() != null && grupoDAO.buscarPorId(dto.idGrupo()) == null) {
             System.out.println("ERRO: Grupo informado não existe");
             throw new IllegalArgumentException("O grupo informado não existe.");
         }
+
+        // Anti-injection (SQL/HTML/path traversal) e whitelist de campos estruturados
+        ValidadorEntrada.nomePessoa("Nome", dto.nome(), 80);
+        ValidadorEntrada.email(dto.email());
+        ValidadorEntrada.senha(dto.senha());
+        ValidadorEntrada.cpf(dto.cpf());
     }
 }

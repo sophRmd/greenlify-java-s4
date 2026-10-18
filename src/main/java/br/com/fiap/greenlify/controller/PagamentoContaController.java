@@ -49,28 +49,4 @@ public class PagamentoContaController {
         return ResponseEntity.ok(service.listarPorUsuario(idUsuario));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<String> alterar(@PathVariable int id,
-                                          @RequestBody PagamentoContaRequestDTO objeto) {
-        try {
-            service.alterar(objeto, id);
-            return ResponseEntity.ok().build();
-        } catch (IllegalArgumentException e) {
-            if (e.getMessage() != null && e.getMessage().contains("não encontrado")) {
-                return ResponseEntity.notFound().build();
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Erro ao alterar o pagamento: " + e.getMessage());
-        }
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluir(@PathVariable int id) {
-        try {
-            service.excluir(id);
-            return ResponseEntity.ok().build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
 }

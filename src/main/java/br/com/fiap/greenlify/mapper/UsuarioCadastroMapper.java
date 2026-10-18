@@ -14,21 +14,22 @@ public class UsuarioCadastroMapper {
         usuario.setStatusConta(dto.statusConta());
         usuario.setCpf(dto.cpf());
         usuario.setDataNascimento(dto.dataNascimento());
-        usuario.setGrupo(dto.grupo());
+        if (dto.idGrupo() != null) {
+            usuario.setGrupo(ReferenciaMapper.grupo(dto.idGrupo()));
+        }
         return usuario;
     }
 
+    /** Nunca inclui senha nem CPF na resposta. */
     public static UsuarioCadastroResponseDTO toDto (UsuarioComum usuario){
-        UsuarioCadastroResponseDTO dto = new UsuarioCadastroResponseDTO(
+        return new UsuarioCadastroResponseDTO(
+                usuario.getIdUsuario(),
                 usuario.getNome(),
                 usuario.getEmail(),
-                usuario.getSenha(),
                 usuario.getNivelAcesso(),
                 usuario.getStatusConta(),
-                usuario.getCpf(),
                 usuario.getDataNascimento(),
                 usuario.getGrupo()
         );
-        return dto;
     }
 }

@@ -15,8 +15,8 @@ public class PerfilSustentavelMapper {
         perfil.setTotalAguaEconomizada(dto.totalAguaEconomizada());
         perfil.setTotalEnergiaEconomizada(dto.totalEnergiaEconomizada());
         perfil.setTotalCarbonoEconomizado(dto.totalCarbonoEconomizado());
-        perfil.setUsuario(dto.usuario());
-        perfil.setNivel(dto.nivel());
+        perfil.setUsuario(ReferenciaMapper.usuarioComum(dto.idUsuario()));
+        perfil.setNivel(ReferenciaMapper.nivel(dto.idNivel()));
         return perfil;
     }
 
@@ -28,7 +28,7 @@ public class PerfilSustentavelMapper {
                 perfil.getTotalAguaEconomizada(),
                 perfil.getTotalEnergiaEconomizada(),
                 perfil.getTotalCarbonoEconomizado(),
-                perfil.getUsuario(),
+                UsuarioResumoMapper.toDto(perfil.getUsuario()),
                 perfil.getNivel()
         );
         return dto;

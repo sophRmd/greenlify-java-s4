@@ -1,5 +1,6 @@
 package br.com.fiap.greenlify.service;
 
+import br.com.fiap.greenlify.util.ValidadorEntrada;
 import br.com.fiap.greenlify.dao.GrupoDAO;
 import br.com.fiap.greenlify.dto.GrupoRequestDTO;
 import br.com.fiap.greenlify.dto.GrupoResponseDTO;
@@ -79,5 +80,8 @@ public class GrupoService {
             System.out.println("ERRO: A quantidade de usuários não pode ser negativa.");
             throw new IllegalArgumentException("A quantidade de usuários não pode ser negativa.");
         }
+
+        // Anti-injection (SQL/HTML/path traversal) e whitelist de campos estruturados
+        ValidadorEntrada.textoLivre("O nome do grupo", dto.nome(), 50);
     }
 }

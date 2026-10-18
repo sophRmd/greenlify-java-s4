@@ -47,8 +47,8 @@ public class PosicaoRankingService {
     }
 
     public void cadastrarGrupo(PosicaoRankingGrupoRequestDTO dto) {
-        validarComum(dto.posicao(), dto.pontuacao(), dto.ranking() != null);
-        if (dto.grupo() == null) {
+        validarComum(dto.posicao(), dto.pontuacao(), dto.idRanking() > 0);
+        if (dto.idGrupo() <= 0) {
             System.out.println("ERRO: O grupo é obrigatório.");
             throw new IllegalArgumentException("O grupo é obrigatório.");
         }
@@ -57,8 +57,8 @@ public class PosicaoRankingService {
 
     public void alterarGrupo(PosicaoRankingGrupoRequestDTO dto, int id) {
         buscarGrupoPorId(id);
-        validarComum(dto.posicao(), dto.pontuacao(), dto.ranking() != null);
-        if (dto.grupo() == null) {
+        validarComum(dto.posicao(), dto.pontuacao(), dto.idRanking() > 0);
+        if (dto.idGrupo() <= 0) {
             System.out.println("ERRO: O grupo é obrigatório.");
             throw new IllegalArgumentException("O grupo é obrigatório.");
         }
@@ -93,8 +93,8 @@ public class PosicaoRankingService {
     }
 
     public void cadastrarIndividual(PosicaoRankingIndividualRequestDTO dto) {
-        validarComum(dto.posicao(), dto.pontuacao(), dto.ranking() != null);
-        if (dto.usuario() == null) {
+        validarComum(dto.posicao(), dto.pontuacao(), dto.idRanking() > 0);
+        if (dto.idUsuario() <= 0) {
             System.out.println("ERRO: O usuário é obrigatório.");
             throw new IllegalArgumentException("O usuário é obrigatório.");
         }
@@ -103,8 +103,8 @@ public class PosicaoRankingService {
 
     public void alterarIndividual(PosicaoRankingIndividualRequestDTO dto, int id) {
         buscarIndividualPorId(id);
-        validarComum(dto.posicao(), dto.pontuacao(), dto.ranking() != null);
-        if (dto.usuario() == null) {
+        validarComum(dto.posicao(), dto.pontuacao(), dto.idRanking() > 0);
+        if (dto.idUsuario() <= 0) {
             System.out.println("ERRO: O usuário é obrigatório.");
             throw new IllegalArgumentException("O usuário é obrigatório.");
         }

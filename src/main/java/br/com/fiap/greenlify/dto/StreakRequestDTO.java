@@ -1,7 +1,5 @@
 package br.com.fiap.greenlify.dto;
 
-import br.com.fiap.greenlify.models.Usuario;
-
 import java.time.LocalDate;
 
 public record StreakRequestDTO(
@@ -9,7 +7,6 @@ public record StreakRequestDTO(
         int maiorSequencia,
         int sequenciaAtual,
         LocalDate ultimaAtividade,
-        LocalDate primeiraAtividade,
-        Usuario usuario
+        LocalDate primeiraAtividade
 ) {
 }

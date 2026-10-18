@@ -1,5 +1,6 @@
 package br.com.fiap.greenlify.service;
 
+import br.com.fiap.greenlify.util.ValidadorEntrada;
 import br.com.fiap.greenlify.dao.ContaLuzDAO;
 import br.com.fiap.greenlify.dto.ContaLuzRequestDTO;
 import br.com.fiap.greenlify.dto.ContalLuzResponseDTO;
@@ -70,6 +71,9 @@ public class ContaLuzService {
             System.out.println("ERRO: O valor da conta deve ser maior que zero.");
             throw new IllegalArgumentException("O valor da conta deve ser maior que zero.");
         }
+
+        // Anti-injection (SQL/HTML/path traversal) e whitelist de campos estruturados
+        ValidadorEntrada.codigoBarras(dto.codigoBarras());
     }
 
     private int proximoId() {

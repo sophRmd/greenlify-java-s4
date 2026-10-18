@@ -10,19 +10,17 @@ public class MissaoContinuaResumidaMapper {
         missaoContinua.setNome(dto.nome());
         missaoContinua.setTipoMetrica(dto.tipoMetrica());
         missaoContinua.setValorMetrica(dto.valorMetrica());
-        missaoContinua.setPontuacao(dto.pontuacao());
+        missaoContinua.setPontuacao(ReferenciaMapper.pontuacao(dto.idPontuacao()));
         return missaoContinua;
     }
 
     public static MissaoContinuaResumidaResponseDTO toDto (MissaoContinua missaoContinua){
-        MissaoContinuaResumidaResponseDTO dto = new MissaoContinuaResumidaResponseDTO(
+        return new MissaoContinuaResumidaResponseDTO(
+                missaoContinua.getIdMissao(),
                 missaoContinua.getNome(),
                 missaoContinua.getTipoMetrica(),
                 missaoContinua.getValorMetrica(),
                 missaoContinua.getPontuacao()
         );
-
-        return dto;
-
     }
 }

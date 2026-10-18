@@ -1,13 +1,12 @@
 package br.com.fiap.greenlify.dto;
 
 import br.com.fiap.greenlify.models.Selo;
-import br.com.fiap.greenlify.models.Usuario;
-
 import java.time.LocalDate;
 
 public record UsuarioSeloResponseDTO(
+        int idUsuarioSelo,
         LocalDate dataColeta,
-        Usuario usuario,
+        UsuarioResumoDTO usuario,
         Selo selo
 ) {
 }

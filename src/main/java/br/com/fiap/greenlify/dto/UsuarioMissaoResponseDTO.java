@@ -1,12 +1,12 @@
 package br.com.fiap.greenlify.dto;
 
 import br.com.fiap.greenlify.models.Missao;
-import br.com.fiap.greenlify.models.Usuario;
 
 public record UsuarioMissaoResponseDTO(
+        int idUsuarioMissao,
         int tentativas,
         int progressoAtual,
-        Usuario usuario,
+        UsuarioResumoDTO usuario,
         Missao missao
 ) {
 }

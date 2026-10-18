@@ -8,8 +8,8 @@ public class ResgateMapper {
     public static Resgate dtoToEntity (ResgateRequestDTO dto){
         Resgate resgate = new Resgate();
         resgate.setDataConcessao(dto.dataConcessao());
-        resgate.setUsuario(dto.usuario());
-        resgate.setRecompensa(dto.recompensa());
+        resgate.setUsuario(ReferenciaMapper.usuario(dto.idUsuario()));
+        resgate.setRecompensa(ReferenciaMapper.recompensa(dto.idRecompensa()));
         return resgate;
     }
 
@@ -17,7 +17,7 @@ public class ResgateMapper {
         ResgateResponseDTO dto = new ResgateResponseDTO(
                 resgate.getIdResgate(),
                 resgate.getDataConcessao(),
-                resgate.getUsuario(),
+                UsuarioResumoMapper.toDto(resgate.getUsuario()),
                 resgate.getRecompensa()
         );
         return dto;

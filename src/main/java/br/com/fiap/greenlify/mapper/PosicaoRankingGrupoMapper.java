@@ -9,13 +9,14 @@ public class PosicaoRankingGrupoMapper {
         PosicaoRanking posicaoRanking = new PosicaoRanking();
         posicaoRanking.setPosicao(dto.posicao());
         posicaoRanking.setPontuacao(dto.pontuacao());
-        posicaoRanking.setGrupo(dto.grupo());
-        posicaoRanking.setRanking(dto.ranking());
+        posicaoRanking.setGrupo(ReferenciaMapper.grupo(dto.idGrupo()));
+        posicaoRanking.setRanking(ReferenciaMapper.ranking(dto.idRanking()));
         return posicaoRanking;
     }
 
     public static PosicaoRankingGrupoResponseDTO toDto (PosicaoRanking posicaoRanking){
         PosicaoRankingGrupoResponseDTO dto = new PosicaoRankingGrupoResponseDTO(
+                posicaoRanking.getIdPosicao(),
                 posicaoRanking.getPosicao(),
                 posicaoRanking.getPontuacao(),
                 posicaoRanking.getGrupo(),

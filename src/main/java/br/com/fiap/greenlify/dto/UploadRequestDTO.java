@@ -1,9 +1,6 @@
 package br.com.fiap.greenlify.dto;
 
 import br.com.fiap.greenlify.enums.StatusUploadEnum;
-import br.com.fiap.greenlify.models.Missao;
-import br.com.fiap.greenlify.models.UsuarioComum;
-
 import java.time.LocalDate;
 
 public record UploadRequestDTO(
@@ -13,7 +10,7 @@ public record UploadRequestDTO(
         String arquivo,
         String analise,
         int confiancaDuplicidade,
-        Missao missao,
-        UsuarioComum usuario
+        int idMissao,
+        int idUsuario
 ) {
 }

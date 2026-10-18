@@ -13,10 +13,10 @@ public class CarteiraMapper {
     }
 
     public static CarteiraResponseDTO toDto (Carteira carteira){
-        CarteiraResponseDTO dto = new CarteiraResponseDTO(
+        return new CarteiraResponseDTO(
+                carteira.getIdCarteira(),
                 carteira.getQtdPontos(),
                 carteira.getValorReal()
         );
-        return dto;
     }
 }

@@ -39,11 +39,6 @@ public class PerfilSustentavelController {
         }
     }
 
-    @GetMapping
-    public ResponseEntity<List<PerfilSustentavelResponseDTO>> listar() {
-        return ResponseEntity.ok(service.listar());
-    }
-
     @PutMapping("/{id}")
     public ResponseEntity<String> alterar(@PathVariable int id,
                                           @RequestBody PerfilSustentavelRequestDTO objeto) {

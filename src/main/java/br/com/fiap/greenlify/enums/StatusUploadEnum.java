@@ -4,5 +4,5 @@ public enum StatusUploadEnum {
     EM_ANALISE,
     APROVADO,
     PARCIALMENTE_APROVADO,
-    RECUSADO
+    REPROVADO
 }

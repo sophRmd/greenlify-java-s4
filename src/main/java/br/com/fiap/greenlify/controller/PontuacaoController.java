@@ -30,15 +30,6 @@ public class PontuacaoController {
         }
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<PontuacaoResponseDTO> buscarPorId(@PathVariable int id) {
-        try {
-            return ResponseEntity.ok(service.buscarPorId(id));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
     @GetMapping("/buscar")
     public ResponseEntity<PontuacaoResponseDTO> buscarPorImpactoEDificuldade(
             @RequestParam String impacto,

@@ -1,5 +1,6 @@
 package br.com.fiap.greenlify.service;
 
+import br.com.fiap.greenlify.util.ValidadorEntrada;
 import br.com.fiap.greenlify.dao.MissaoContinuaDAO;
 import br.com.fiap.greenlify.dto.MissaoContinuaCompletaRequestDTO;
 import br.com.fiap.greenlify.dto.MissaoContinuaCompletaResponseDTO;
@@ -50,8 +51,6 @@ public class MissaoContinuaService {
         MissaoContinua missao = MissaoContinuaCompletaMapper.dtoToEntity(dto);
         missao.setIdMissao(id);
         missao.setTipoMissao(TipoMissaoEnum.MISSAO_CONTINUA);
-        // O UPDATE do DAO usa continua.getIdPontuacao().
-        missao.getPontuacao().setIdPontuacao(missao.getPontuacao().getIdPontuacao());
 
         missaoContinuaDAO.alterar(missao, missao);
     }
@@ -93,9 +92,15 @@ public class MissaoContinuaService {
             System.out.println("ERRO: O valor da métrica deve ser maior que zero.");
             throw new IllegalArgumentException("O valor da métrica deve ser maior que zero.");
         }
-        if (dto.pontuacao() == null) {
+        if (dto.idPontuacao() <= 0) {
             System.out.println("ERRO: A pontuação é obrigatória");
             throw new IllegalArgumentException("A pontuação é obrigatória.");
         }
+
+        // Anti-injection (SQL/HTML/path traversal) e whitelist de campos estruturados
+        ValidadorEntrada.textoLivre("O nome da missão", dto.nome(), 200);
+        ValidadorEntrada.textoLivreOpcional("A descrição", dto.descricao(), 255);
+        ValidadorEntrada.textoLivreOpcional("Como comprovar", dto.comoComprovar(), 255);
+        ValidadorEntrada.textoLivreOpcional("Os requisitos", dto.requisitos(), 255);
     }
 }

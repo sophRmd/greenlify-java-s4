@@ -16,6 +16,7 @@ public class RecompensaMapper {
 
     public static RecompensaResponseDTO toDto (Recompensa recompensa){
         RecompensaResponseDTO dto = new RecompensaResponseDTO(
+                recompensa.getIdRecompensa(),
                 recompensa.getBonusPercentual(),
                 recompensa.getBonusPontos(),
                 recompensa.getDescricao()

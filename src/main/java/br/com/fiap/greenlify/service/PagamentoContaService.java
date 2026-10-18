@@ -73,11 +73,11 @@ public class PagamentoContaService {
             System.out.println("ERRO: O valor pago deve ser maior que zero.");
             throw new IllegalArgumentException("O valor pago deve ser maior que zero.");
         }
-        if (dto.usuario() == null) {
+        if (dto.idUsuario() <= 0) {
             System.out.println("ERRO: O usuário é obrigatório.");
             throw new IllegalArgumentException("O usuário é obrigatório.");
         }
-        if (dto.contaLuz() == null) {
+        if (dto.idContaLuz() <= 0) {
             System.out.println("ERRO: A conta de luz é obrigatória.");
             throw new IllegalArgumentException("A conta de luz é obrigatória.");
         }

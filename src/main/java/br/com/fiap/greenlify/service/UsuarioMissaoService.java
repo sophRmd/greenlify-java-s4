@@ -45,9 +45,9 @@ public class UsuarioMissaoService {
     public void cadastrar(UsuarioMissaoRequestDTO dto) {
         validar(dto);
 
-        boolean jaTemMissao = usuarioMissaoDAO.listarPorUsuario(dto.usuario().getIdUsuario())
+        boolean jaTemMissao = usuarioMissaoDAO.listarPorUsuario(dto.idUsuario())
                 .stream()
-                .anyMatch(um -> um.getMissao().getIdMissao() == dto.missao().getIdMissao());
+                .anyMatch(um -> um.getMissao().getIdMissao() == dto.idMissao());
         if (jaTemMissao) {
             System.out.println("ERRO: O usuário já possui essa missão.");
             throw new IllegalArgumentException("O usuário já possui essa missão.");
@@ -85,15 +85,15 @@ public class UsuarioMissaoService {
             System.out.println("ERRO: O progresso atual não pode ser negativo.");
             throw new IllegalArgumentException("O progresso atual não pode ser negativo.");
         }
-        if (dto.usuario() == null) {
+        if (dto.idUsuario() <= 0) {
             System.out.println("ERRO: O usuário é obrigatório.");
             throw new IllegalArgumentException("O usuário é obrigatório.");
         }
-        if (dto.missao() == null) {
+        if (dto.idMissao() <= 0) {
             System.out.println("ERRO: A missão é obrigatória.");
             throw new IllegalArgumentException("A missão é obrigatória.");
         }
-        if (usuarioDAO.buscarPorId(dto.usuario().getIdUsuario()) == null) {
+        if (usuarioDAO.buscarPorId(dto.idUsuario()) == null) {
             System.out.println("ERRO: Usuário informado não existe.");
             throw new IllegalArgumentException("O usuário informado não existe.");
         }

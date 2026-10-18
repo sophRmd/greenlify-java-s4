@@ -1,8 +1,7 @@
 package br.com.fiap.greenlify.dto;
 
-import java.time.LocalDate;
-
 public record ContalLuzResponseDTO(
+        int idContaLuz,
         String codigoBarras,
         double valorConta
 ) {

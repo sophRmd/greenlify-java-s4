@@ -53,8 +53,8 @@ public class UsuarioSeloService {
                 .stream()
                 .anyMatch(us -> us.getUsuario() != null
                         && us.getSelo() != null
-                        && us.getUsuario().getIdUsuario() == dto.usuario().getIdUsuario()
-                        && us.getSelo().getIdSelo() == dto.selo().getIdSelo());
+                        && us.getUsuario().getIdUsuario() == dto.idUsuario()
+                        && us.getSelo().getIdSelo() == dto.idSelo());
         if (jaColetou) {
             System.out.println("ERRO: O usuário já coletou esse selo.");
             throw new IllegalArgumentException("O usuário já coletou esse selo.");
@@ -92,19 +92,19 @@ public class UsuarioSeloService {
             System.out.println("ERRO: A data de coleta não pode ser futura.");
             throw new IllegalArgumentException("A data de coleta não pode ser futura.");
         }
-        if (dto.usuario() == null) {
+        if (dto.idUsuario() <= 0) {
             System.out.println("ERRO: O usuário é obrigatório.");
             throw new IllegalArgumentException("O usuário é obrigatório.");
         }
-        if (dto.selo() == null) {
+        if (dto.idSelo() <= 0) {
             System.out.println("ERRO: O selo é obrigatório.");
             throw new IllegalArgumentException("O selo é obrigatório.");
         }
-        if (usuarioDAO.buscarPorId(dto.usuario().getIdUsuario()) == null) {
+        if (usuarioDAO.buscarPorId(dto.idUsuario()) == null) {
             System.out.println("ERRO: Usuário informado não existe.");
             throw new IllegalArgumentException("O usuário informado não existe.");
         }
-        if (seloDAO.buscarPorId(dto.selo().getIdSelo()) == null) {
+        if (seloDAO.buscarPorId(dto.idSelo()) == null) {
             System.out.println("ERRO: Selo informado não existe.");
             throw new IllegalArgumentException("O selo informado não existe.");
         }

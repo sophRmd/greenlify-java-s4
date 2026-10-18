@@ -1,5 +1,6 @@
 package br.com.fiap.greenlify.service;
 
+import br.com.fiap.greenlify.util.ValidadorEntrada;
 import br.com.fiap.greenlify.dao.NivelContribuicaoDAO;
 import br.com.fiap.greenlify.dto.NivelContribuicaoRequestDTO;
 import br.com.fiap.greenlify.dto.NivelContribuicaoResponseDTO;
@@ -74,5 +75,8 @@ public class NivelContribuicaoService {
             System.out.println("ERRO: O XP máximo deve ser maior que o XP mínimo.");
             throw new IllegalArgumentException("O XP máximo deve ser maior que o XP mínimo.");
         }
+
+        // Anti-injection (SQL/HTML/path traversal) e whitelist de campos estruturados
+        ValidadorEntrada.textoLivre("Nome", dto.nome(), 40);
     }
 }

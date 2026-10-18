@@ -16,20 +16,6 @@ public class CarteiraController {
 
     private CarteiraService service = new CarteiraService();
 
-    @GetMapping
-    public ResponseEntity<List<CarteiraResponseDTO>> listar() {
-        return ResponseEntity.ok(service.listar());
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<CarteiraResponseDTO> buscarPorId(@PathVariable int id) {
-        try {
-            return ResponseEntity.ok(service.buscarPorId(id));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
     @GetMapping("/usuario/{idUsuario}")
     public ResponseEntity<CarteiraResponseDTO> buscarPorIdUsuario(@PathVariable int idUsuario) {
         try {

@@ -1,5 +1,6 @@
 package br.com.fiap.greenlify.service;
 
+import br.com.fiap.greenlify.util.ValidadorEntrada;
 import br.com.fiap.greenlify.dao.SeloDAO;
 import br.com.fiap.greenlify.dto.SeloRequestDTO;
 import br.com.fiap.greenlify.dto.SeloResponseDTO;
@@ -83,5 +84,8 @@ public class SeloService {
             System.out.println("ERRO: Os pontos necessários devem ser maiores que zero.");
             throw new IllegalArgumentException("Os pontos necessários devem ser maiores que zero.");
         }
+
+        // Anti-injection (SQL/HTML/path traversal) e whitelist de campos estruturados
+        ValidadorEntrada.textoLivre("Nome", dto.nome(), 40);
     }
 }

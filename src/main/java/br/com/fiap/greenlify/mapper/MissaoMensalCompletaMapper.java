@@ -20,6 +20,7 @@ public class MissaoMensalCompletaMapper {
 
     public static MissaoMensalCompletaResponseDTO toDto (MissaoMensal missaoMensal){
         MissaoMensalCompletaResponseDTO dto = new MissaoMensalCompletaResponseDTO(
+                missaoMensal.getIdMissao(),
                 missaoMensal.getNome(),
                 missaoMensal.getDescricao(),
                 missaoMensal.getComoComprovar(),

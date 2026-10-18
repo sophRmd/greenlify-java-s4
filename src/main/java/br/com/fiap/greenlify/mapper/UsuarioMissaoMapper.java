@@ -9,16 +9,17 @@ public class UsuarioMissaoMapper {
         UsuarioMissao usuarioMissao = new UsuarioMissao();
         usuarioMissao.setTentativas(dto.tentativas());
         usuarioMissao.setProgressoAtual(dto.progressoAtual());
-        usuarioMissao.setUsuario(dto.usuario());
-        usuarioMissao.setMissao(dto.missao());
+        usuarioMissao.setUsuario(ReferenciaMapper.usuario(dto.idUsuario()));
+        usuarioMissao.setMissao(ReferenciaMapper.missao(dto.idMissao()));
         return usuarioMissao;
     }
 
     public static UsuarioMissaoResponseDTO toDto (UsuarioMissao usuarioMissao){
         UsuarioMissaoResponseDTO dto = new UsuarioMissaoResponseDTO(
+                usuarioMissao.getIdUsuarioMissao(),
                 usuarioMissao.getTentativas(),
                 usuarioMissao.getProgressoAtual(),
-                usuarioMissao.getUsuario(),
+                UsuarioResumoMapper.toDto(usuarioMissao.getUsuario()),
                 usuarioMissao.getMissao()
         );
         return dto;

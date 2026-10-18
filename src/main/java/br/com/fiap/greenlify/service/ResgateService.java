@@ -68,19 +68,19 @@ public class ResgateService {
             System.out.println("ERRO: A data de concessão é obrigatória.");
             throw new IllegalArgumentException("A data de concessão é obrigatória.");
         }
-        if (dto.usuario() == null) {
+        if (dto.idUsuario() <= 0) {
             System.out.println("ERRO: O usuário é obrigatório.");
             throw new IllegalArgumentException("O usuário é obrigatório.");
         }
-        if (dto.recompensa() == null) {
+        if (dto.idRecompensa() <= 0) {
             System.out.println("ERRO: A recompensa é obrigatória.");
             throw new IllegalArgumentException("A recompensa é obrigatória.");
         }
-        if (usuarioDAO.buscarPorId(dto.usuario().getIdUsuario()) == null) {
+        if (usuarioDAO.buscarPorId(dto.idUsuario()) == null) {
             System.out.println("ERRO: Usuário informado não existe.");
             throw new IllegalArgumentException("O usuário informado não existe.");
         }
-        if (recompensaDAO.buscarPorId(dto.recompensa().getIdRecompensa()) == null) {
+        if (recompensaDAO.buscarPorId(dto.idRecompensa()) == null) {
             System.out.println("ERRO: Recompensa informada não existe.");
             throw new IllegalArgumentException("A recompensa informada não existe.");
         }

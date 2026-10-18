@@ -1,5 +1,8 @@
 package br.com.fiap.greenlify.service;
 
+import br.com.fiap.greenlify.enums.DificuldadeEnum;
+import br.com.fiap.greenlify.enums.ImpactoEnum;
+import br.com.fiap.greenlify.util.ValidadorEntrada;
 import br.com.fiap.greenlify.dao.PontuacaoDAO;
 import br.com.fiap.greenlify.dto.PontuacaoRequestDTO;
 import br.com.fiap.greenlify.dto.PontuacaoResponseDTO;
@@ -26,7 +29,10 @@ public class PontuacaoService {
     }
 
     public PontuacaoResponseDTO buscarPorImpactoEDificuldade(String impacto, String dificuldade) {
-        Pontuacao pontuacao = pontuacaoDAO.buscarPorImpactoEDificuldade(impacto, dificuldade);
+        // Parâmetros vindos da URL: só aceita valores dos enums (whitelist).
+        String impactoValido = ValidadorEntrada.enumValor(ImpactoEnum.class, "Impacto", impacto).name();
+        String dificuldadeValida = ValidadorEntrada.enumValor(DificuldadeEnum.class, "Dificuldade", dificuldade).name();
+        Pontuacao pontuacao = pontuacaoDAO.buscarPorImpactoEDificuldade(impactoValido, dificuldadeValida);
         if (pontuacao == null) {
             throw new IllegalArgumentException("Pontuação não encontrada");
         }

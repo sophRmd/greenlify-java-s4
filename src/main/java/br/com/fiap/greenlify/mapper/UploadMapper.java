@@ -13,13 +13,14 @@ public class UploadMapper {
         upload.setArquivo(dto.arquivo());
         upload.setAnalise(dto.analise());
         upload.setConfiancaDuplicidade(dto.confiancaDuplicidade());
-        upload.setMissao(dto.missao());
-        upload.setUsuario(dto.usuario());
+        upload.setMissao(ReferenciaMapper.missao(dto.idMissao()));
+        upload.setUsuario(ReferenciaMapper.usuarioComum(dto.idUsuario()));
         return upload;
     }
 
     public static UploadResponseDTO toDto (Upload upload){
         UploadResponseDTO dto = new UploadResponseDTO(
+                upload.getIdUpload(),
                 upload.getStatus(),
                 upload.getDataEnvio(),
                 upload.getDataAnalise(),
@@ -27,7 +28,7 @@ public class UploadMapper {
                 upload.getAnalise(),
                 upload.getConfiancaDuplicidade(),
                 upload.getMissao(),
-                upload.getUsuario()
+                UsuarioResumoMapper.toDto(upload.getUsuario())
         );
         return dto;
     }

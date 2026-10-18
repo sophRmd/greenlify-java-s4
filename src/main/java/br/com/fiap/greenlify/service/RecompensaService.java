@@ -1,5 +1,6 @@
 package br.com.fiap.greenlify.service;
 
+import br.com.fiap.greenlify.util.ValidadorEntrada;
 import br.com.fiap.greenlify.dao.RecompensaDAO;
 import br.com.fiap.greenlify.dto.RecompensaRequestDTO;
 import br.com.fiap.greenlify.dto.RecompensaResponseDTO;
@@ -79,5 +80,8 @@ public class RecompensaService {
             System.out.println("ERRO: A descrição é obrigatória.");
             throw new IllegalArgumentException("A descrição é obrigatória.");
         }
+
+        // Anti-injection (SQL/HTML/path traversal) e whitelist de campos estruturados
+        ValidadorEntrada.textoLivre("A descrição", dto.descricao(), 100);
     }
 }

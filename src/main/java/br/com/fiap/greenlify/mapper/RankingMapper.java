@@ -16,6 +16,7 @@ public class RankingMapper {
 
     public static RankingResponseDTO toDto (Ranking ranking){
         RankingResponseDTO dto = new RankingResponseDTO(
+                ranking.getIdRanking(),
                 ranking.getDataInicio(),
                 ranking.getDataFim(),
                 ranking.getTipo(),

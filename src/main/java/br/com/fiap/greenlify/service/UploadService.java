@@ -1,5 +1,6 @@
 package br.com.fiap.greenlify.service;
 
+import br.com.fiap.greenlify.util.ValidadorEntrada;
 import br.com.fiap.greenlify.dao.MissaoContinuaDAO;
 import br.com.fiap.greenlify.dao.UploadDAO;
 import br.com.fiap.greenlify.dao.UsuarioComumDAO;
@@ -65,21 +66,25 @@ public class UploadService {
             System.out.println("ERRO: A confiança de duplicidade deve estar entre 0 e 100.");
             throw new IllegalArgumentException("A confiança de duplicidade deve estar entre 0 e 100.");
         }
-        if (dto.usuario() == null) {
+        if (dto.idUsuario() <= 0) {
             System.out.println("ERRO: O usuário é obrigatório.");
             throw new IllegalArgumentException("O usuário é obrigatório.");
         }
-        if (dto.missao() == null) {
+        if (dto.idMissao() <= 0) {
             System.out.println("ERRO: A missão é obrigatória.");
             throw new IllegalArgumentException("A missão é obrigatória.");
         }
-        if (usuarioDAO.buscarPorId(dto.usuario().getIdUsuario()) == null) {
+        if (usuarioDAO.buscarPorId(dto.idUsuario()) == null) {
             System.out.println("ERRO: Usuário informado não existe.");
             throw new IllegalArgumentException("O usuário informado não existe.");
         }
-        if (missaoDAO.buscarPorId(dto.missao().getIdMissao()) == null) {
+        if (missaoDAO.buscarPorId(dto.idMissao()) == null) {
             System.out.println("ERRO: Missão informada não existe.");
             throw new IllegalArgumentException("A missão informada não existe.");
         }
+
+        // Anti-injection (SQL/HTML/path traversal) e whitelist de campos estruturados
+        ValidadorEntrada.nomeArquivo(dto.arquivo());
+        ValidadorEntrada.textoLivreOpcional("A análise", dto.analise(), 255);
     }
 }

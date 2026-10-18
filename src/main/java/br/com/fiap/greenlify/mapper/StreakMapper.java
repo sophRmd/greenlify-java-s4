@@ -12,7 +12,6 @@ public class StreakMapper {
         streak.setSequenciaAtual(dto.sequenciaAtual());
         streak.setUltimaAtividade(dto.ultimaAtividade());
         streak.setPrimeiraAtividade(dto.primeiraAtividade());
-        streak.setUsuario(dto.usuario());
         return streak;
     }
 
@@ -23,7 +22,7 @@ public class StreakMapper {
                 streak.getSequenciaAtual(),
                 streak.getUltimaAtividade(),
                 streak.getPrimeiraAtividade(),
-                streak.getUsuario()
+                UsuarioResumoMapper.toDto(streak.getUsuario())
         );
         return dto;
     }
