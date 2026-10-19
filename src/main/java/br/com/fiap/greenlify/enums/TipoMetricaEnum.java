@@ -5,5 +5,9 @@ public enum TipoMetricaEnum {
     M3,
     KWH,
     KG_CO2,
-    ITENS_RECICLADOS
+    ITENS_RECICLADOS,
+    UNIDADES,
+    KG_RESIDUOS,
+    LITROS,
+    HORAS
 }

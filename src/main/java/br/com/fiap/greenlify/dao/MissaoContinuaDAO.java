@@ -210,43 +210,54 @@ public class MissaoContinuaDAO {
      */
     public MissaoContinua buscarPorId(Integer idMissao) {
         conexao = ConnectionFactory.obterConexao();
-        MissaoContinua continua = new MissaoContinua();
+        MissaoContinua continua = null;
 
-        PreparedStatement psMissao = null;
-        PreparedStatement psContinua = null;
+        String sql = "SELECT m.id_missao, m.nm_missao, m.ds_missao, " +
+                "m.ds_requisitos, m.ds_comprovacao, m.ds_categoria, " +
+                "m.ds_tipo_missao, mc.nr_limite_realizacoes, " +
+                "mc.ds_tipo_metrica, mc.vl_metrica, " +
+                "p.id_pontuacao, p.nr_pontuacao " +
+                "FROM Missao m " +
+                "INNER JOIN Missao_Continua mc ON mc.id_missao = m.id_missao " +
+                "LEFT JOIN Pontuacao p ON p.id_pontuacao = mc.id_pontuacao " +
+                "WHERE m.id_missao = ?";
 
-        try {
-            psMissao = conexao.prepareStatement("SELECT * FROM missao WHERE id_missao = ?");
-            psMissao.setInt(1, idMissao);
-            ResultSet rsMissao = psMissao.executeQuery();
-            if (rsMissao.next()) {
-                continua.setIdMissao(rsMissao.getInt(1));
-                continua.setNome(rsMissao.getString(2));
-                continua.setDescricao(rsMissao.getString(3));
-                continua.setRequisitos(rsMissao.getString(4));
-                continua.setComoComprovar(rsMissao.getString(5));
-                continua.setCategoria(CategoriaEnum.valueOf(rsMissao.getString(6)));
-                continua.setTipoMissao(TipoMissaoEnum.valueOf(rsMissao.getString(7)));
-            }
-            rsMissao.close();
-            psMissao.close();
+        try (PreparedStatement ps = conexao.prepareStatement(sql)) {
+            ps.setInt(1, idMissao);
 
-            psContinua = conexao.prepareStatement("SELECT * FROM missao_continua WHERE id_missao = ?");
-            psContinua.setInt(1, idMissao);
-            ResultSet rsContinua = psContinua.executeQuery();
-            if (rsContinua.next()) {
-                continua.setLimiteRealizacoes(rsContinua.getInt(2));
-                continua.setTipoMetrica(TipoMetricaEnum.valueOf(rsContinua.getString(3)));
-                continua.setValorMetrica(rsContinua.getInt(4));
-                Pontuacao pontuacao = new PontuacaoDAO().buscarPorId(rsContinua.getInt(5));
-                if (pontuacao == null) {
-                    pontuacao = new Pontuacao();
-                    pontuacao.setIdPontuacao(rsContinua.getInt(5));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    continua = new MissaoContinua();
+
+                    // dados da missão
+                    continua.setIdMissao(rs.getInt("id_missao"));
+                    continua.setNome(rs.getString("nm_missao"));
+                    continua.setDescricao(rs.getString("ds_missao"));
+                    continua.setRequisitos(rs.getString("ds_requisitos"));
+                    continua.setComoComprovar(rs.getString("ds_comprovacao"));
+                    continua.setCategoria(
+                            CategoriaEnum.valueOf(rs.getString("ds_categoria")));
+                    continua.setTipoMissao(
+                            TipoMissaoEnum.valueOf(rs.getString("ds_tipo_missao")));
+
+                    // dados da missão contínua
+                    continua.setLimiteRealizacoes(
+                            rs.getInt("nr_limite_realizacoes"));
+                    continua.setTipoMetrica(
+                            TipoMetricaEnum.valueOf(rs.getString("ds_tipo_metrica")));
+                    continua.setValorMetrica(rs.getInt("vl_metrica"));
+
+                    // pontuação
+                    int idPontuacao = rs.getInt("id_pontuacao");
+
+                    if (!rs.wasNull()) {
+                        Pontuacao pontuacao = new Pontuacao();
+                        pontuacao.setIdPontuacao(idPontuacao);
+                        pontuacao.setValorBase(rs.getInt("nr_pontuacao"));
+                        continua.setPontuacao(pontuacao);
+                    }
                 }
-                continua.setPontuacao(pontuacao);
             }
-            rsContinua.close();
-            psContinua.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -259,9 +270,9 @@ public class MissaoContinuaDAO {
                 e.printStackTrace();
             }
         }
+
         return continua;
     }
-
     /**
      * Lista todas as missões contínuas cadastradas no banco de dados.
      *
@@ -270,19 +281,47 @@ public class MissaoContinuaDAO {
     public List<MissaoContinua> listar() {
         conexao = ConnectionFactory.obterConexao();
         List<MissaoContinua> continuas = new ArrayList<>();
-        List<Integer> ids = new ArrayList<>();
-        PreparedStatement psMissao = null;
 
-        try {
-            psMissao = conexao.prepareStatement("SELECT * FROM missao WHERE ds_tipo_missao = 'MISSAO_CONTINUA'");
-            ResultSet rsMissao = psMissao.executeQuery();
+        String sql = "SELECT m.id_missao, m.nm_missao, m.ds_missao, " +
+                "m.ds_requisitos, m.ds_comprovacao, m.ds_categoria, " +
+                "m.ds_tipo_missao, mc.nr_limite_realizacoes, " +
+                "mc.ds_tipo_metrica, mc.vl_metrica, " +
+                "p.id_pontuacao, p.nr_pontuacao " +
+                "FROM Missao m " +
+                "INNER JOIN Missao_Continua mc ON mc.id_missao = m.id_missao " +
+                "LEFT JOIN Pontuacao p ON p.id_pontuacao = mc.id_pontuacao " +
+                "WHERE m.ds_tipo_missao = 'MISSAO_CONTINUA'";
 
-            while (rsMissao.next()) {
-                ids.add(rsMissao.getInt(1));
+        try (PreparedStatement ps = conexao.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                MissaoContinua continua = new MissaoContinua();
+
+                // dados da missão
+                continua.setIdMissao(rs.getInt(1));
+                continua.setNome(rs.getString(2));
+                continua.setDescricao(rs.getString(3));
+                continua.setRequisitos(rs.getString(4));
+                continua.setComoComprovar(rs.getString(5));
+                continua.setCategoria(CategoriaEnum.valueOf(rs.getString(6)));
+                continua.setTipoMissao(TipoMissaoEnum.valueOf(rs.getString(7)));
+
+                continua.setLimiteRealizacoes(rs.getInt(8));
+                continua.setTipoMetrica(TipoMetricaEnum.valueOf(rs.getString(9)));
+                continua.setValorMetrica(rs.getInt(10));
+
+                int idPontuacao = rs.getInt(11);
+
+                if (!rs.wasNull()) {
+                    Pontuacao pontuacao = new Pontuacao();
+                    pontuacao.setIdPontuacao(idPontuacao);
+                    pontuacao.setValorBase(rs.getInt(12));
+                    continua.setPontuacao(pontuacao);
+                }
+
+                continuas.add(continua);
             }
-
-            rsMissao.close();
-            psMissao.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -295,11 +334,7 @@ public class MissaoContinuaDAO {
                 e.printStackTrace();
             }
         }
-        // buscarPorId reutiliza o campo 'conexao'; por isso só é chamado depois que a
-        // conexão desta consulta foi fechada (antes, ela ficava aberta e vazava).
-        for (int id : ids) {
-            continuas.add(buscarPorId(id));
-        }
+
         return continuas;
     }
 }
