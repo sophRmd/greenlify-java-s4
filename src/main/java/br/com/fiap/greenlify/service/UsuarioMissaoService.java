@@ -19,12 +19,14 @@ public class UsuarioMissaoService {
     private final UsuarioComumDAO usuarioDAO;
     private final MissaoMensalDAO missaoMensalDAO;
     private final StreakService streakService;
+    private final RankingAllTimeService rankingAllTimeService;
 
     public UsuarioMissaoService() {
         this.usuarioMissaoDAO = new UsuarioMissaoDAO();
         this.usuarioDAO = new UsuarioComumDAO();
         this.missaoMensalDAO = new MissaoMensalDAO();
         this.streakService = new StreakService();
+        this.rankingAllTimeService = new RankingAllTimeService();
     }
 
     public UsuarioMissaoResponseDTO buscarPorId(int id) {
@@ -60,8 +62,9 @@ public class UsuarioMissaoService {
             throw new IllegalArgumentException("O usuário já possui essa missão.");
         }
 
-        usuarioMissaoDAO.cadastrar(UsuarioMissaoMapper.dtoToEntity(dto));
-        registrarStreakSeConcluiuMissaoMensal(dto, new UsuarioMissao()); // progresso anterior = 0
+        UsuarioMissao novo = UsuarioMissaoMapper.dtoToEntity(dto);
+        usuarioMissaoDAO.cadastrar(novo);
+        registrarConclusaoMissaoMensal(dto, new UsuarioMissao(), novo.getIdUsuarioMissao()); // progresso anterior = 0
     }
 
     public void excluir(int id) {
@@ -82,14 +85,16 @@ public class UsuarioMissaoService {
         UsuarioMissao usuarioMissao = UsuarioMissaoMapper.dtoToEntity(dto);
         usuarioMissao.setIdUsuarioMissao(id);
         usuarioMissaoDAO.alterar(usuarioMissao);
-        registrarStreakSeConcluiuMissaoMensal(dto, existente);
+        registrarConclusaoMissaoMensal(dto, existente, id);
     }
 
     /**
-     * Quando o progresso de uma missão mensal atinge a meta (dentro do período
-     * da missão), registra a atividade do mês no streak do usuário.
+     * Quando o progresso de uma missão mensal atinge a meta, grava a data de
+     * conclusão (rankings) e avisa o ranking all time; se isso aconteceu dentro
+     * do período da missão, registra também a atividade do mês no streak.
      */
-    private void registrarStreakSeConcluiuMissaoMensal(UsuarioMissaoRequestDTO dto, UsuarioMissao anterior) {
+    private void registrarConclusaoMissaoMensal(UsuarioMissaoRequestDTO dto, UsuarioMissao anterior,
+                                                int idUsuarioMissao) {
         MissaoMensal mensal = missaoMensalDAO.buscarPorId(dto.idMissao());
         if (mensal == null) {
             return;
@@ -99,6 +104,10 @@ public class UsuarioMissaoService {
                 && !hoje.isBefore(mensal.getDataInicio()) && !hoje.isAfter(mensal.getDataFim());
         boolean acabouDeConcluir = anterior.getProgressoAtual() < mensal.getMeta()
                 && dto.progressoAtual() >= mensal.getMeta();
+        if (acabouDeConcluir) {
+            usuarioMissaoDAO.registrarConclusao(idUsuarioMissao, hoje);
+            rankingAllTimeService.registrarMissaoConcluida(dto.idUsuario());
+        }
         if (noPeriodo && acabouDeConcluir) {
             streakService.registrarAtividade(dto.idUsuario(), hoje);
         }

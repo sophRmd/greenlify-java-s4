@@ -7,7 +7,9 @@ import br.com.fiap.greenlify.enums.TipoRankingEnum;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Representa um período de ranking dentro da plataforma GreenLify,
@@ -23,9 +25,10 @@ public class Ranking {
     private StatusRankingEnum status;
 
     /**
-     * Calcula o ranking de usuários com base na quantidade de pontos
-     * disponível na carteira de cada um, ordenando do maior para o menor
-     * saldo e atribuindo a posição correspondente.
+     * Calcula o ranking de usuários do período (de {@code dataInicio} a
+     * {@code dataFim}): ordena do maior para o menor número de missões
+     * concluídas dentro do período e, em caso de empate, pelo saldo de pontos
+     * da carteira, atribuindo a posição correspondente.
      *
      * @return lista de posições de ranking dos usuários, já ordenada e
      *         numerada, ou lista vazia caso não existam usuários cadastrados
@@ -41,6 +44,12 @@ public class Ranking {
             return posicoes;
         }
 
+        // uma única consulta agrupada: missões concluídas por usuário dentro do período
+        Map<Integer, Integer> missoesNoPeriodo = new HashMap<>();
+        if (dataInicio != null && dataFim != null) {
+            missoesNoPeriodo = new UsuarioMissaoDAO().contarConcluidasPorUsuario(dataInicio, dataFim);
+        }
+
         for (UsuarioComum usuario : todosUsuarios) {
             Carteira carteira = carteiraDAO.buscarPorIdUsuario(usuario.getIdUsuario());
 
@@ -52,6 +61,7 @@ public class Ranking {
             PosicaoRanking pr = new PosicaoRanking();
             pr.setUsuario(usuario);
             pr.setPontuacao(pontos);
+            pr.setMissoesRealizadas(missoesNoPeriodo.getOrDefault(usuario.getIdUsuario(), 0));
             pr.setRanking(this);
 
             posicoes.add(pr);
@@ -60,6 +70,10 @@ public class Ranking {
         posicoes.sort(new Comparator<PosicaoRanking>() {
             @Override
             public int compare(PosicaoRanking p1, PosicaoRanking p2) {
+                int porMissoes = Integer.compare(p2.getMissoesRealizadas(), p1.getMissoesRealizadas());
+                if (porMissoes != 0) {
+                    return porMissoes;
+                }
                 return Integer.compare(p2.getPontuacao(), p1.getPontuacao());
             }
         });

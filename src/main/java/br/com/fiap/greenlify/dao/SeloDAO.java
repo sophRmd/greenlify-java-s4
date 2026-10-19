@@ -123,80 +123,54 @@ public class SeloDAO{
      * @return o selo encontrado, ou {@code null} caso não exista
      */
     public Selo buscarPorId(int idSelo) {
-        conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
         Selo selo = null;
 
-        try {
-            ps = conexao.prepareStatement("SELECT * FROM Selo WHERE id_selo = ?");
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement("SELECT * FROM Selo WHERE id_selo = ?")) {
+
             ps.setInt(1, idSelo);
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                selo = new Selo();
-                selo.setIdSelo(rs.getInt(1));
-                selo.setNome(rs.getString(2));
-                selo.setValeEnergia(rs.getInt(3));
-                selo.setCreditoCarbono(rs.getInt(4));
-                selo.setPontosNecessarios(rs.getInt(5));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    selo = mapear(rs);
+                }
             }
-
-            rs.close();
-            ps.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
         }
         return selo;
     }
 
     /**
-     * Lista todos os selos cadastrados.
+     * Lista todos os selos cadastrados, em uma única consulta (uma única conexão).
      *
      * @return lista com todos os selos (pode vir vazia, nunca nula)
      */
     public List<Selo> listar() {
-        conexao = ConnectionFactory.obterConexao();
         List<Selo> selos = new ArrayList<>();
-        List<Integer> ids = new ArrayList<>();
-        PreparedStatement ps = null;
 
-        try {
-            ps = conexao.prepareStatement("SELECT * FROM Selo");
-            ResultSet rs = ps.executeQuery();
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement("SELECT * FROM Selo");
+             ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                ids.add(rs.getInt(1));
+                selos.add(mapear(rs));
             }
-
-
-            rs.close();
-            ps.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-        // buscarPorId reutiliza o campo 'conexao'; por isso só é chamado depois que a
-        // conexão desta consulta foi fechada (antes, ela ficava aberta e vazava).
-        for (int id : ids) {
-            selos.add(buscarPorId(id));
         }
         return selos;
+    }
+
+    /** Monta o selo a partir da linha atual (colunas na ordem da tabela). */
+    private Selo mapear(ResultSet rs) throws SQLException {
+        Selo selo = new Selo();
+        selo.setIdSelo(rs.getInt(1));
+        selo.setNome(rs.getString(2));
+        selo.setValeEnergia(rs.getInt(3));
+        selo.setCreditoCarbono(rs.getInt(4));
+        selo.setPontosNecessarios(rs.getInt(5));
+        return selo;
     }
 }

@@ -25,17 +25,12 @@ public class RankingService {
         this.posicaoDAO = new PosicaoRankingDAO();
     }
 
-    /** O ranking é atualizado diariamente, logo após a meia-noite. */
-    @Scheduled(cron = "0 5 0 * * *")
-    public void atualizarRankingsDiario() {
-        atualizarRankings();
-    }
-
     /**
      * Recalcula os rankings (individual e de grupos) do mês atual: fecha os
      * períodos que já terminaram, cria o ranking do mês se ainda não existir e
      * regrava as posições usando as regras do model {@link Ranking}
-     * (individual: pontos da carteira; grupos: total de selos dos integrantes).
+     * (individual: missões concluídas no mês e, no empate, pontos da carteira;
+     * grupos: total de selos dos integrantes).
      *
      * @throws IllegalStateException se o banco não confirmar a criação do ranking
      */

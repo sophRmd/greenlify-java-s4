@@ -20,6 +20,8 @@ public class PosicaoRanking {
     private UsuarioComum usuario;
     private Ranking ranking;
     private Grupo grupo;
+    /** Missões concluídas pelo usuário dentro do período do ranking (calculado, não é gravado). */
+    private int missoesRealizadas;
 
     /**
      * Concede ao usuário informado a recompensa correspondente à colocação
@@ -143,5 +145,13 @@ public class PosicaoRanking {
 
     public void setGrupo(Grupo grupo) {
         this.grupo = grupo;
+    }
+
+    public int getMissoesRealizadas() {
+        return missoesRealizadas;
+    }
+
+    public void setMissoesRealizadas(int missoesRealizadas) {
+        this.missoesRealizadas = missoesRealizadas;
     }
 }

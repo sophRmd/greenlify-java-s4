@@ -204,104 +204,81 @@ public class MissaoMensalDAO {
         }
     }
 
+    /** Consulta única: Missao + Missao_Mensal (LEFT JOIN, como o antigo buscarPorId). */
+    private static final String SELECT_MENSAL =
+            "SELECT m.id_missao, m.nm_missao, m.ds_missao, m.ds_requisitos, m.ds_comprovacao, "
+                    + "       m.ds_categoria, m.ds_tipo_missao, mm.vl_meta, mm.dt_inicio, mm.dt_fim "
+                    + "FROM Missao m "
+                    + "LEFT JOIN Missao_Mensal mm ON mm.id_missao = m.id_missao ";
+
     /**
      * Busca uma missão mensal pelo seu identificador, combinando os
-     * dados das tabelas {@code Missao} e {@code Missao_Mensal}.
+     * dados das tabelas {@code Missao} e {@code Missao_Mensal} em uma única consulta.
      *
      * @param idMissao identificador da missão
      * @return a missão mensal encontrada; os campos permanecem com os
      *         valores padrão caso o identificador não seja encontrado
      */
     public MissaoMensal buscarPorId(Integer idMissao) {
-        conexao = ConnectionFactory.obterConexao();
         MissaoMensal mensal = new MissaoMensal();
 
-        PreparedStatement psMissao = null;
-        PreparedStatement psMensal = null;
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(SELECT_MENSAL + "WHERE m.id_missao = ?")) {
 
-        try {
-            psMissao = conexao.prepareStatement("SELECT * FROM Missao WHERE id_missao = ?");
-            psMissao.setInt(1, idMissao);
-            ResultSet rsMissao = psMissao.executeQuery();
-            if (rsMissao.next()) {
-                mensal.setIdMissao(rsMissao.getInt(1));
-                mensal.setNome(rsMissao.getString(2));
-                mensal.setDescricao(rsMissao.getString(3));
-                mensal.setRequisitos(rsMissao.getString(4));
-                mensal.setComoComprovar(rsMissao.getString(5));
-                mensal.setCategoria(CategoriaEnum.valueOf(rsMissao.getString(6)));
-                mensal.setTipoMissao(TipoMissaoEnum.valueOf(rsMissao.getString(7)));
-            }
-            rsMissao.close();
-            psMissao.close();
-
-            psMensal = conexao.prepareStatement("SELECT * FROM Missao_Mensal WHERE id_missao = ?");
-            psMensal.setInt(1, idMissao);
-            ResultSet rsMensal = psMensal.executeQuery();
-            if (rsMensal.next()) {
-                mensal.setMeta(rsMensal.getInt(2));
-                if (rsMensal.getDate(3) != null) {
-                    mensal.setDataInicio(rsMensal.getDate(3).toLocalDate());
-                }
-                if (rsMensal.getDate(4) != null) {
-                    mensal.setDataFim(rsMensal.getDate(4).toLocalDate());
+            ps.setInt(1, idMissao);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    mensal = mapear(rs);
                 }
             }
-            rsMensal.close();
-            psMensal.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
         }
         return mensal;
     }
 
     /**
-     * Lista todas as missões mensais cadastradas no banco de dados.
+     * Lista todas as missões mensais cadastradas no banco de dados,
+     * usando uma única consulta (uma única conexão).
      *
      * @return lista de missões mensais cadastradas
      */
     public List<MissaoMensal> listar() {
-        conexao = ConnectionFactory.obterConexao();
         List<MissaoMensal> mensais = new ArrayList<>();
-        List<Integer> ids = new ArrayList<>();
-        PreparedStatement psMissao = null;
 
-        try {
-            psMissao = conexao.prepareStatement("SELECT * FROM Missao WHERE ds_tipo_missao = 'MISSAO_MENSAL'");
-            ResultSet rsMissao = psMissao.executeQuery();
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(
+                     SELECT_MENSAL + "WHERE m.ds_tipo_missao = 'MISSAO_MENSAL' ORDER BY m.id_missao");
+             ResultSet rs = ps.executeQuery()) {
 
-            while (rsMissao.next()) {
-                ids.add(rsMissao.getInt(1));
+            while (rs.next()) {
+                mensais.add(mapear(rs));
             }
-
-            rsMissao.close();
-            psMissao.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-        // buscarPorId reutiliza o campo 'conexao'; por isso só é chamado depois que a
-        // conexão desta consulta foi fechada (antes, ela ficava aberta e vazava).
-        for (int id : ids) {
-            mensais.add(buscarPorId(id));
         }
         return mensais;
+    }
+
+    /** Monta a missão mensal a partir da linha atual do JOIN (sem novas consultas). */
+    private MissaoMensal mapear(ResultSet rs) throws SQLException {
+        MissaoMensal mensal = new MissaoMensal();
+        mensal.setIdMissao(rs.getInt("id_missao"));
+        mensal.setNome(rs.getString("nm_missao"));
+        mensal.setDescricao(rs.getString("ds_missao"));
+        mensal.setRequisitos(rs.getString("ds_requisitos"));
+        mensal.setComoComprovar(rs.getString("ds_comprovacao"));
+        mensal.setCategoria(CategoriaEnum.valueOf(rs.getString("ds_categoria")));
+        mensal.setTipoMissao(TipoMissaoEnum.valueOf(rs.getString("ds_tipo_missao")));
+        mensal.setMeta(rs.getInt("vl_meta"));
+        if (rs.getDate("dt_inicio") != null) {
+            mensal.setDataInicio(rs.getDate("dt_inicio").toLocalDate());
+        }
+        if (rs.getDate("dt_fim") != null) {
+            mensal.setDataFim(rs.getDate("dt_fim").toLocalDate());
+        }
+        return mensal;
     }
 }

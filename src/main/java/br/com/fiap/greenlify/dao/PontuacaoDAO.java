@@ -201,42 +201,29 @@ public class PontuacaoDAO {
     }
 
     /**
-     * Lista todas as pontuações cadastradas no banco de dados.
+     * Lista todas as pontuações cadastradas no banco de dados, em uma única
+     * consulta (uma única conexão).
      *
      * @return lista de pontuações cadastradas
      */
     public List<Pontuacao> listar() {
-        conexao = ConnectionFactory.obterConexao();
         List<Pontuacao> pontuacoes = new ArrayList<>();
-        List<Integer> ids = new ArrayList<>();
-        PreparedStatement ps = null;
 
-        try {
-            ps = conexao.prepareStatement("SELECT * FROM Pontuacao");
-            ResultSet rs = ps.executeQuery();
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement("SELECT * FROM Pontuacao");
+             ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                ids.add(rs.getInt(1));
+                Pontuacao pontuacao = new Pontuacao();
+                pontuacao.setIdPontuacao(rs.getInt(1));
+                pontuacao.setImpacto(ImpactoEnum.valueOf(rs.getString(2)));
+                pontuacao.setDificuldade(DificuldadeEnum.valueOf(rs.getString(3)));
+                pontuacao.setValorBase(rs.getInt(4));
+                pontuacoes.add(pontuacao);
             }
-
-            rs.close();
-            ps.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-        // buscarPorId reutiliza o campo 'conexao'; por isso só é chamado depois que a
-        // conexão desta consulta foi fechada (antes, ela ficava aberta e vazava).
-        for (int id : ids) {
-            pontuacoes.add(buscarPorId(id));
         }
         return pontuacoes;
     }

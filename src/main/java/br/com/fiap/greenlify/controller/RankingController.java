@@ -30,7 +30,7 @@ public class RankingController {
         }
     }
 
-    /** Recalcula os rankings do mês (também roda sozinho todo dia, pelo agendamento). */
+    /** Recalcula os rankings do mês */
     @PostMapping("/atualizar")
     public ResponseEntity<String> atualizar() {
         try {

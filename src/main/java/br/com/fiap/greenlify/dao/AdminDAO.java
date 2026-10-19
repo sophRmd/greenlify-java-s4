@@ -230,42 +230,31 @@ public class AdminDAO {
     }
 
     /**
-     * Lista todos os administradores cadastrados no banco de dados.
+     * Lista todos os administradores cadastrados no banco de dados, em uma
+     * única consulta (uma única conexão).
      *
      * @return lista de administradores cadastrados
      */
     public List<Admin> listar() {
-        conexao = ConnectionFactory.obterConexao();
         List<Admin> usuarios = new ArrayList<>();
-        List<Integer> ids = new ArrayList<>();
-        PreparedStatement ps = null;
 
-        try {
-            ps = conexao.prepareStatement("SELECT * FROM Usuario WHERE nr_nivel_acesso = 1");
-            ResultSet rs = ps.executeQuery();
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement("SELECT * FROM Usuario WHERE nr_nivel_acesso = 1");
+             ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                ids.add(rs.getInt(1));
+                Admin usuario = new Admin();
+                usuario.setIdUsuario(rs.getInt(1));
+                usuario.setNome(rs.getString(2));
+                usuario.setEmail(rs.getString(5));
+                usuario.setSenha(rs.getString(6));
+                usuario.setNivelAcesso(rs.getInt(7));
+                usuario.setStatusConta(StatusContaEnum.valueOf(rs.getString(8)));
+                usuarios.add(usuario);
             }
-
-            rs.close();
-            ps.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-        // buscarPorId reutiliza o campo 'conexao'; por isso só é chamado depois que a
-        // conexão desta consulta foi fechada (antes, ela ficava aberta e vazava).
-        for (int id : ids) {
-            usuarios.add(buscarPorId(id));
         }
         return usuarios;
     }

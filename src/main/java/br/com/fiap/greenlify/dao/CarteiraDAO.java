@@ -1,6 +1,8 @@
 package br.com.fiap.greenlify.dao;
 
+import br.com.fiap.greenlify.enums.StatusContaEnum;
 import br.com.fiap.greenlify.models.Carteira;
+import br.com.fiap.greenlify.models.Grupo;
 import br.com.fiap.greenlify.models.UsuarioComum;
 
 import java.sql.Connection;
@@ -123,144 +125,109 @@ public class CarteiraDAO {
         }
     }
 
+    /** Carteira + Usuário (u_) em uma única consulta. */
+    private static final String SELECT_COMPLETO =
+            "SELECT c.id_carteira, c.nr_saldo_pontos, c.vl_pontos_convertidos, "
+                    + "       u.id_usuario AS u_id, u.nm_usuario AS u_nome, u.ds_cpf AS u_cpf, "
+                    + "       u.dt_nascimento AS u_nascimento, u.ds_email AS u_email, u.ds_senha AS u_senha, "
+                    + "       u.nr_nivel_acesso AS u_nivel, u.ds_status_conta AS u_status, u.id_grupo AS u_grupo "
+                    + "FROM Carteira c "
+                    + "LEFT JOIN Usuario u ON u.id_usuario = c.id_usuario AND u.nr_nivel_acesso = 0 ";
+
     /**
-     * Busca uma carteira pelo seu identificador.
+     * Busca uma carteira pelo seu identificador, em uma única consulta.
      *
      * @param idCarteira identificador da carteira
      * @return a carteira encontrada, ou {@code null} caso não exista
      */
     public Carteira buscarPorId(int idCarteira) {
-        conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
-        Carteira carteira = null;
-
-        try {
-            ps = conexao.prepareStatement("SELECT * FROM Carteira WHERE id_carteira = ?");
-            ps.setInt(1, idCarteira);
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                carteira = new Carteira();
-                carteira.setIdCarteira(rs.getInt(1));
-                carteira.setQtdPontos(rs.getInt(2));
-                carteira.setValorReal(rs.getDouble(3));
-
-                int idUsuario = rs.getInt("id_usuario");
-                if (idUsuario > 0) {
-                    UsuarioComumDAO usuarioDao = new UsuarioComumDAO();
-                    UsuarioComum usuario = usuarioDao.buscarPorId(idUsuario);
-                    carteira.setUsuario(usuario);
-                }
-            }
-
-            rs.close();
-            ps.close();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-        return carteira;
+        return buscarUma(SELECT_COMPLETO + "WHERE c.id_carteira = ?", idCarteira);
     }
 
     /**
-     * Lista todas as carteiras cadastradas no banco de dados.
+     * Lista todas as carteiras cadastradas no banco de dados, em uma única consulta.
      *
      * @return lista de carteiras cadastradas
      */
     public List<Carteira> listar() {
-        conexao = ConnectionFactory.obterConexao();
         List<Carteira> lista = new ArrayList<>();
-        PreparedStatement ps = null;
 
-        try {
-            ps = conexao.prepareStatement("SELECT * FROM Carteira");
-            ResultSet rs = ps.executeQuery();
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(SELECT_COMPLETO + "ORDER BY c.id_carteira");
+             ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                Carteira carteira = new Carteira();
-                carteira.setIdCarteira(rs.getInt("id_carteira"));
-                carteira.setQtdPontos(rs.getInt("nr_saldo_pontos"));
-                carteira.setValorReal(rs.getDouble("vl_pontos_convertidos"));
-
-                int idUsuario = rs.getInt("id_usuario");
-                if (idUsuario > 0) {
-                    UsuarioComumDAO usuarioDao = new UsuarioComumDAO();
-                    UsuarioComum usuario = usuarioDao.buscarPorId(idUsuario);
-                    carteira.setUsuario(usuario);
-                }
-
-                lista.add(carteira);
+                lista.add(mapear(rs));
             }
-
-            rs.close();
-            ps.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
         }
         return lista;
     }
 
     /**
-     * Busca a carteira associada a um determinado usuário.
+     * Busca a carteira associada a um determinado usuário, em uma única consulta.
      *
      * @param idUsuario identificador do usuário
      * @return a carteira do usuário, ou {@code null} caso não exista
      */
     public Carteira buscarPorIdUsuario(int idUsuario) {
-        conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
-        ResultSet rs = null;
+        return buscarUma(SELECT_COMPLETO + "WHERE c.id_usuario = ?", idUsuario);
+    }
+
+    private Carteira buscarUma(String sql, int parametro) {
         Carteira carteira = null;
 
-        try {
-            String sql = "SELECT * FROM Carteira WHERE id_usuario = ?";
-            ps = conexao.prepareStatement(sql);
-            ps.setInt(1, idUsuario);
-            rs = ps.executeQuery();
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(sql)) {
 
-            if (rs.next()) {
-                carteira = new Carteira();
-                carteira.setIdCarteira(rs.getInt("id_carteira"));
-                carteira.setQtdPontos(rs.getInt("nr_saldo_pontos"));
-                carteira.setValorReal(rs.getDouble("vl_pontos_convertidos"));
-
-                UsuarioComumDAO usuarioDao = new UsuarioComumDAO();
-                UsuarioComum usuario = usuarioDao.buscarPorId(idUsuario);
-                carteira.setUsuario(usuario);
+            ps.setInt(1, parametro);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    carteira = mapear(rs);
+                }
             }
-
-            rs.close();
-            ps.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
         }
         return carteira;
+    }
+
+    private Carteira mapear(ResultSet rs) throws SQLException {
+        Carteira carteira = new Carteira();
+        carteira.setIdCarteira(rs.getInt("id_carteira"));
+        carteira.setQtdPontos(rs.getInt("nr_saldo_pontos"));
+        carteira.setValorReal(rs.getDouble("vl_pontos_convertidos"));
+        carteira.setUsuario(mapearUsuario(rs));
+        return carteira;
+    }
+
+    /** Monta o usuário comum a partir das colunas u_*; devolve null se não existir. */
+    private UsuarioComum mapearUsuario(ResultSet rs) throws SQLException {
+        int idUsuario = rs.getInt("u_id");
+        if (rs.wasNull()) {
+            return null;
+        }
+        UsuarioComum usuario = new UsuarioComum();
+        usuario.setIdUsuario(idUsuario);
+        usuario.setNome(rs.getString("u_nome"));
+        usuario.setCpf(rs.getString("u_cpf"));
+        usuario.setDataNascimento(rs.getDate("u_nascimento").toLocalDate());
+        usuario.setEmail(rs.getString("u_email"));
+        usuario.setSenha(rs.getString("u_senha"));
+        usuario.setNivelAcesso(rs.getInt("u_nivel"));
+        usuario.setStatusConta(StatusContaEnum.valueOf(rs.getString("u_status")));
+
+        // Igual ao UsuarioComumDAO.buscarPorId: só guarda o id do grupo do usuário.
+        int idGrupo = rs.getInt("u_grupo");
+        if (idGrupo > 0) {
+            Grupo grupo = new Grupo();
+            grupo.setIdGrupo(idGrupo);
+            usuario.setGrupo(grupo);
+        }
+        return usuario;
     }
 
     /**

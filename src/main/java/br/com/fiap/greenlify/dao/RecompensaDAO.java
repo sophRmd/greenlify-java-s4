@@ -121,81 +121,53 @@ public class RecompensaDAO {
      * @return a recompensa encontrada, ou {@code null} caso não exista nenhuma com esse id
      */
     public Recompensa buscarPorId(int idRecompensa) {
-        conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
         Recompensa recompensa = null;
 
-        try {
-            ps = conexao.prepareStatement("SELECT * FROM Recompensa WHERE id_recompensa = ?");
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement("SELECT * FROM Recompensa WHERE id_recompensa = ?")) {
+
             ps.setInt(1, idRecompensa);
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                recompensa = new Recompensa();
-                recompensa.setIdRecompensa(rs.getInt(1));
-                recompensa.setBonusPercentual(rs.getInt(2));
-                recompensa.setBonusPontos(rs.getInt(3));
-                recompensa.setDescricao(rs.getString(4));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    recompensa = mapear(rs);
+                }
             }
-
-            rs.close();
-            ps.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
         }
         return recompensa;
     }
 
     /**
-     * Lista todas as recompensas cadastradas.
-     * Internamente busca primeiro os ids e depois reaproveita {@link #buscarPorId(int)}
-     * para montar cada objeto completo.
+     * Lista todas as recompensas cadastradas, em uma única consulta (uma única conexão).
      *
      * @return lista com todas as recompensas cadastradas (pode vir vazia, nunca nula)
      */
     public List<Recompensa> listar() {
-        conexao = ConnectionFactory.obterConexao();
         List<Recompensa> recompensas = new ArrayList<>();
-        List<Integer> ids = new ArrayList<>();
-        PreparedStatement ps = null;
 
-        try {
-            ps = conexao.prepareStatement("SELECT * FROM Recompensa");
-            ResultSet rs = ps.executeQuery();
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement("SELECT * FROM Recompensa");
+             ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                ids.add(rs.getInt(1));
+                recompensas.add(mapear(rs));
             }
-
-
-            rs.close();
-            ps.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-        // buscarPorId reutiliza o campo 'conexao'; por isso só é chamado depois que a
-        // conexão desta consulta foi fechada (antes, ela ficava aberta e vazava).
-        for (int id : ids) {
-            recompensas.add(buscarPorId(id));
         }
         return recompensas;
+    }
+
+    /** Monta a recompensa a partir da linha atual (colunas na ordem da tabela). */
+    private Recompensa mapear(ResultSet rs) throws SQLException {
+        Recompensa recompensa = new Recompensa();
+        recompensa.setIdRecompensa(rs.getInt(1));
+        recompensa.setBonusPercentual(rs.getInt(2));
+        recompensa.setBonusPontos(rs.getInt(3));
+        recompensa.setDescricao(rs.getString(4));
+        return recompensa;
     }
 }

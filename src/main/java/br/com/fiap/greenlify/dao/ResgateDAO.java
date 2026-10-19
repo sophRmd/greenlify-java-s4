@@ -1,6 +1,10 @@
 package br.com.fiap.greenlify.dao;
 
+import br.com.fiap.greenlify.enums.StatusContaEnum;
+import br.com.fiap.greenlify.models.Grupo;
+import br.com.fiap.greenlify.models.Recompensa;
 import br.com.fiap.greenlify.models.Resgate;
+import br.com.fiap.greenlify.models.UsuarioComum;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -115,112 +119,118 @@ public class ResgateDAO {
         }
     }
 
+    /** Resgate + Recompensa (rc_) + Usuário (u_) em uma única consulta. */
+    private static final String SELECT_COMPLETO =
+            "SELECT r.id_resgate, r.dt_concessao, "
+                    + "       rc.id_recompensa AS rc_id, rc.nr_bonus_percentual AS rc_percentual, "
+                    + "       rc.nr_pontos_bonus AS rc_pontos, rc.ds_recompensa AS rc_descricao, "
+                    + "       u.id_usuario AS u_id, u.nm_usuario AS u_nome, u.ds_cpf AS u_cpf, "
+                    + "       u.dt_nascimento AS u_nascimento, u.ds_email AS u_email, u.ds_senha AS u_senha, "
+                    + "       u.nr_nivel_acesso AS u_nivel, u.ds_status_conta AS u_status, u.id_grupo AS u_grupo "
+                    + "FROM Resgate r "
+                    + "LEFT JOIN Recompensa rc ON rc.id_recompensa = r.id_recompensa "
+                    + "LEFT JOIN Usuario u ON u.id_usuario = r.id_usuario AND u.nr_nivel_acesso = 0 ";
+
     /**
-     * Busca um resgate pelo id, já carregando o usuário e a recompensa relacionados.
+     * Busca um resgate pelo id, já carregando o usuário e a recompensa relacionados,
+     * em uma única consulta.
      *
      * @param id id do resgate procurado
      * @return o resgate encontrado (com usuário e recompensa preenchidos), ou {@code null} se não existir
      */
     public Resgate buscarPorId(int id) {
-        conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
-        ResultSet rs = null;
         Resgate resgate = null;
 
-        try {
-            String sql = "SELECT * FROM Resgate WHERE id_resgate = ?";
-            ps = conexao.prepareStatement(sql);
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(SELECT_COMPLETO + "WHERE r.id_resgate = ?")) {
+
             ps.setInt(1, id);
-            rs = ps.executeQuery();
-
-            if (rs.next()) {
-                resgate = new Resgate();
-                resgate.setIdResgate(rs.getInt(1));
-
-                Date dtConcessao = rs.getDate(2);
-                if (dtConcessao != null) {
-                    resgate.setDataConcessao(dtConcessao.toLocalDate());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    resgate = mapear(rs);
                 }
-
-                int idUsuario = rs.getInt(3);
-                UsuarioComumDAO usuarioDAO = new UsuarioComumDAO();
-                resgate.setUsuario(usuarioDAO.buscarPorId(idUsuario));
-
-                int idRecompensa = rs.getInt(4);
-                RecompensaDAO recompensaDAO = new RecompensaDAO();
-                resgate.setRecompensa(recompensaDAO.buscarPorId(idRecompensa));
             }
-
-            rs.close();
-            ps.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
         }
-
         return resgate;
     }
 
     /**
      * Retorna todos os resgates cadastrados, cada um já com o usuário
-     * e a recompensa correspondentes carregados.
+     * e a recompensa correspondentes carregados, em uma única consulta.
      *
      * @return lista de resgates (pode vir vazia, nunca nula)
      */
     public List<Resgate> listar() {
-        conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
-        ResultSet rs = null;
         List<Resgate> lista = new ArrayList<>();
 
-        try {
-            String sql = "SELECT * FROM Resgate";
-            ps = conexao.prepareStatement(sql);
-            rs = ps.executeQuery();
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(SELECT_COMPLETO + "ORDER BY r.id_resgate");
+             ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                Resgate resgate = new Resgate();
-                resgate.setIdResgate(rs.getInt(1));
-
-                Date dtConcessao = rs.getDate(2);
-                if (dtConcessao != null) {
-                    resgate.setDataConcessao(dtConcessao.toLocalDate());
-                }
-
-                int idUsuario = rs.getInt(3);
-                UsuarioComumDAO usuarioDAO = new UsuarioComumDAO();
-                resgate.setUsuario(usuarioDAO.buscarPorId(idUsuario));
-
-                int idRecompensa = rs.getInt(4);
-                RecompensaDAO recompensaDAO = new RecompensaDAO();
-                resgate.setRecompensa(recompensaDAO.buscarPorId(idRecompensa));
-
-                lista.add(resgate);
+                lista.add(mapear(rs));
             }
-
-            rs.close();
-            ps.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+        }
+        return lista;
+    }
+
+    private Resgate mapear(ResultSet rs) throws SQLException {
+        Resgate resgate = new Resgate();
+        resgate.setIdResgate(rs.getInt("id_resgate"));
+
+        Date dtConcessao = rs.getDate("dt_concessao");
+        if (dtConcessao != null) {
+            resgate.setDataConcessao(dtConcessao.toLocalDate());
         }
 
-        return lista;
+        resgate.setUsuario(mapearUsuario(rs));
+        resgate.setRecompensa(mapearRecompensa(rs));
+        return resgate;
+    }
+
+    /** Monta a recompensa a partir das colunas rc_*; devolve null se não existir. */
+    private Recompensa mapearRecompensa(ResultSet rs) throws SQLException {
+        int idRecompensa = rs.getInt("rc_id");
+        if (rs.wasNull()) {
+            return null;
+        }
+        Recompensa recompensa = new Recompensa();
+        recompensa.setIdRecompensa(idRecompensa);
+        recompensa.setBonusPercentual(rs.getInt("rc_percentual"));
+        recompensa.setBonusPontos(rs.getInt("rc_pontos"));
+        recompensa.setDescricao(rs.getString("rc_descricao"));
+        return recompensa;
+    }
+
+    /** Monta o usuário comum a partir das colunas u_*; devolve null se não existir. */
+    private UsuarioComum mapearUsuario(ResultSet rs) throws SQLException {
+        int idUsuario = rs.getInt("u_id");
+        if (rs.wasNull()) {
+            return null;
+        }
+        UsuarioComum usuario = new UsuarioComum();
+        usuario.setIdUsuario(idUsuario);
+        usuario.setNome(rs.getString("u_nome"));
+        usuario.setCpf(rs.getString("u_cpf"));
+        usuario.setDataNascimento(rs.getDate("u_nascimento").toLocalDate());
+        usuario.setEmail(rs.getString("u_email"));
+        usuario.setSenha(rs.getString("u_senha"));
+        usuario.setNivelAcesso(rs.getInt("u_nivel"));
+        usuario.setStatusConta(StatusContaEnum.valueOf(rs.getString("u_status")));
+
+        // Igual ao UsuarioComumDAO.buscarPorId: só guarda o id do grupo do usuário.
+        int idGrupo = rs.getInt("u_grupo");
+        if (idGrupo > 0) {
+            Grupo grupo = new Grupo();
+            grupo.setIdGrupo(idGrupo);
+            usuario.setGrupo(grupo);
+        }
+        return usuario;
     }
 }

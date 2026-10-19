@@ -44,6 +44,7 @@ public class UploadService {
     private final FingerprintFrameDAO frameDAO;
     private final UsuarioMissaoDAO usuarioMissaoDAO;
     private final CarteiraDAO carteiraDAO;
+    private final RankingAllTimeService rankingAllTimeService;
 
     /** Confiança (%) a partir da qual o upload é reprovado por duplicidade. */
     private static final int CONFIANCA_REPROVAR = 80;
@@ -60,6 +61,7 @@ public class UploadService {
         this.frameDAO = new FingerprintFrameDAO();
         this.usuarioMissaoDAO = new UsuarioMissaoDAO();
         this.carteiraDAO = new CarteiraDAO();
+        this.rankingAllTimeService = new RankingAllTimeService();
     }
 
     public UploadResponseDTO buscarPorId(int id) {
@@ -161,6 +163,9 @@ public class UploadService {
         MissaoContinua missao = missaoDAO.buscarPorId(idMissao);
         if (aprovado && andamento.getProgressoAtual() == missao.getLimiteRealizacoes()) {
             creditarPontos(usuario, missao.getPontuacao().getValorBase());
+            // missão concluída: guarda a data (ranking do período) e avisa o ranking all time
+            usuarioMissaoDAO.registrarConclusao(andamento.getIdUsuarioMissao(), LocalDate.now());
+            rankingAllTimeService.registrarMissaoConcluida(idUsuario);
         }
     }
 

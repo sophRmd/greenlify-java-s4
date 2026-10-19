@@ -5,11 +5,15 @@ import br.com.fiap.greenlify.models.Usuario;
 import br.com.fiap.greenlify.models.UsuarioMissao;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * DAO da entidade UsuarioMissao, que registra a relação entre um usuário e uma missão
@@ -275,5 +279,90 @@ public class UsuarioMissaoDAO {
             }
         }
         return usuarioMissoes;
+    }
+
+    // ------------------------------------------------------------------
+    // Missões concluídas (usadas pelos rankings)
+    // ------------------------------------------------------------------
+
+    /**
+     * Missão concluída = progresso atingiu o limite de realizações (contínua)
+     * ou a meta (mensal), a mesma regra usada no ResumoService.
+     */
+    private static final String SQL_CONCLUIDAS =
+            "SELECT um.id_usuario, COUNT(*) AS total "
+                    + "FROM Usuario_Missao um "
+                    + "LEFT JOIN Missao_Continua mc ON mc.id_missao = um.id_missao "
+                    + "LEFT JOIN Missao_Mensal mm ON mm.id_missao = um.id_missao "
+                    + "WHERE ((mc.id_missao IS NOT NULL AND mc.nr_limite_realizacoes > 0 "
+                    + "AND um.nr_progresso_atual >= mc.nr_limite_realizacoes) "
+                    + "OR (mm.id_missao IS NOT NULL AND mm.vl_meta > 0 "
+                    + "AND um.nr_progresso_atual >= mm.vl_meta)) ";
+
+    /**
+     * Conta, por usuário, todas as missões já concluídas (ranking all time).
+     *
+     * @return mapa idUsuario -> total de missões concluídas (só usuários com pelo menos uma)
+     */
+    public Map<Integer, Integer> contarConcluidasPorUsuario() {
+        return consultarConcluidas(SQL_CONCLUIDAS + "GROUP BY um.id_usuario", null, null);
+    }
+
+    /**
+     * Conta, por usuário, as missões concluídas dentro de um período
+     * (usa {@code dt_conclusao}, gravada no momento da conclusão).
+     *
+     * @param inicio primeiro dia do período (inclusive)
+     * @param fim    último dia do período (inclusive)
+     * @return mapa idUsuario -> total de missões concluídas no período
+     */
+    public Map<Integer, Integer> contarConcluidasPorUsuario(LocalDate inicio, LocalDate fim) {
+        return consultarConcluidas(SQL_CONCLUIDAS
+                + "AND um.dt_conclusao >= ? AND um.dt_conclusao <= ? GROUP BY um.id_usuario", inicio, fim);
+    }
+
+    /**
+     * Grava a data em que o usuário concluiu a missão. Só preenche se ainda
+     * estiver vazia, então a primeira conclusão é a que vale.
+     *
+     * @param idUsuarioMissao id do registro em Usuario_Missao
+     * @param data            dia da conclusão
+     */
+    public void registrarConclusao(int idUsuarioMissao, LocalDate data) {
+        String sql = "UPDATE Usuario_Missao SET dt_conclusao = ? "
+                + "WHERE id_usuario_missao = ? AND dt_conclusao IS NULL";
+
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setDate(1, Date.valueOf(data));
+            ps.setInt(2, idUsuarioMissao);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /** Executa a contagem com uma conexão local (não usa o campo compartilhado). */
+    private Map<Integer, Integer> consultarConcluidas(String sql, LocalDate inicio, LocalDate fim) {
+        Map<Integer, Integer> totais = new HashMap<>();
+
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            if (inicio != null && fim != null) {
+                ps.setDate(1, Date.valueOf(inicio));
+                ps.setDate(2, Date.valueOf(fim));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    totais.put(rs.getInt("id_usuario"), rs.getInt("total"));
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return totais;
     }
 }
