@@ -1,5 +1,8 @@
 package br.com.fiap.greenlify.dao;
 
+import br.com.fiap.greenlify.enums.StatusContaEnum;
+import br.com.fiap.greenlify.enums.StatusRankingEnum;
+import br.com.fiap.greenlify.enums.TipoRankingEnum;
 import br.com.fiap.greenlify.models.Grupo;
 import br.com.fiap.greenlify.models.PosicaoRanking;
 import br.com.fiap.greenlify.models.Ranking;
@@ -21,12 +24,27 @@ import java.util.Map;
  *
  * <p>Cada posição pertence a um usuário OU a um grupo (nunca aos dois), como
  * exige o CHECK da tabela.</p>
+ *
+ * <p>As consultas de leitura trazem posição, ranking, usuário e grupo em um
+ * único SELECT (JOIN), usando apenas UMA conexão por chamada. Este DAO não
+ * chama nenhum outro DAO.</p>
  */
 public class PosicaoRankingDAO {
-    private Connection conexao;
 
-    private static final String COLUNAS =
-            "id_posicao, nr_posicao, nr_pontuacao, id_ranking, id_usuario, id_grupo";
+    /** Consulta base com JOIN. Os aliases evitam colisão de nomes de colunas. */
+    private static final String SELECT_BASE =
+            "SELECT p.id_posicao, p.nr_posicao, p.nr_pontuacao, "
+                    + "       r.id_ranking AS r_id, r.ds_tipo AS r_tipo, r.dt_inicio AS r_inicio, "
+                    + "       r.dt_fim AS r_fim, r.ds_status AS r_status, "
+                    + "       u.id_usuario AS u_id, u.nm_usuario AS u_nome, u.ds_cpf AS u_cpf, "
+                    + "       u.dt_nascimento AS u_nascimento, u.ds_email AS u_email, u.ds_senha AS u_senha, "
+                    + "       u.nr_nivel_acesso AS u_nivel, u.ds_status_conta AS u_status, u.id_grupo AS u_grupo, "
+                    + "       g.id_grupo AS g_id, g.nm_grupo AS g_nome, g.dt_criacao AS g_criacao, "
+                    + "       g.nr_usuarios AS g_qtd, g.nr_status_grupo AS g_status "
+                    + "FROM Posicao_Ranking p "
+                    + "JOIN Ranking r ON r.id_ranking = p.id_ranking "
+                    + "LEFT JOIN Usuario u ON u.id_usuario = p.id_usuario AND u.nr_nivel_acesso = 0 "
+                    + "LEFT JOIN Grupo g ON g.id_grupo = p.id_grupo ";
 
     /**
      * Cadastra uma nova posição de ranking e preenche o id gerado pelo banco.
@@ -34,13 +52,12 @@ public class PosicaoRankingDAO {
      * @param posicaoRanking posição de ranking a ser cadastrada (com usuário OU grupo)
      */
     public void cadastrar(PosicaoRanking posicaoRanking) {
-        conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
+        String sql = "INSERT INTO Posicao_Ranking (nr_posicao, nr_pontuacao, id_ranking, id_usuario, id_grupo) "
+                + "VALUES (?, ?, ?, ?, ?)";
 
-        try {
-            String sql = "INSERT INTO Posicao_Ranking (nr_posicao, nr_pontuacao, id_ranking, id_usuario, id_grupo) "
-                    + "VALUES (?, ?, ?, ?, ?)";
-            ps = conexao.prepareStatement(sql, new String[]{"ID_POSICAO"});
+        try (Connection conexao = ConnectionFactory.obterConexao();
+             PreparedStatement ps = conexao.prepareStatement(sql, new String[]{"ID_POSICAO"})) {
+
             ps.setInt(1, posicaoRanking.getPosicao());
             ps.setInt(2, posicaoRanking.getPontuacao());
             ps.setInt(3, posicaoRanking.getRanking().getIdRanking());
@@ -51,17 +68,14 @@ public class PosicaoRankingDAO {
 
             ps.executeUpdate();
 
-            ResultSet rsGerado = ps.getGeneratedKeys();
-            if (rsGerado.next()) {
-                posicaoRanking.setIdPosicao(rsGerado.getInt(1));
+            try (ResultSet rsGerado = ps.getGeneratedKeys()) {
+                if (rsGerado.next()) {
+                    posicaoRanking.setIdPosicao(rsGerado.getInt(1));
+                }
             }
-            rsGerado.close();
-            ps.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            fechar();
         }
     }
 
@@ -71,20 +85,7 @@ public class PosicaoRankingDAO {
      * @param idPosicao identificador da posição
      */
     public void excluir(int idPosicao) {
-        conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
-
-        try {
-            ps = conexao.prepareStatement("DELETE FROM Posicao_Ranking WHERE id_posicao = ?");
-            ps.setInt(1, idPosicao);
-            ps.executeUpdate();
-            ps.close();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            fechar();
-        }
+        executarUpdate("DELETE FROM Posicao_Ranking WHERE id_posicao = ?", idPosicao);
     }
 
     /**
@@ -93,20 +94,7 @@ public class PosicaoRankingDAO {
      * @param idRanking identificador do ranking
      */
     public void excluirPorRanking(int idRanking) {
-        conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
-
-        try {
-            ps = conexao.prepareStatement("DELETE FROM Posicao_Ranking WHERE id_ranking = ?");
-            ps.setInt(1, idRanking);
-            ps.executeUpdate();
-            ps.close();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            fechar();
-        }
+        executarUpdate("DELETE FROM Posicao_Ranking WHERE id_ranking = ?", idRanking);
     }
 
     /**
@@ -116,28 +104,8 @@ public class PosicaoRankingDAO {
      * @return a posição encontrada, ou {@code null} se não existir
      */
     public PosicaoRanking buscarPorId(int idPosicao) {
-        conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
-        PosicaoRanking posicaoRanking = null;
-
-        try {
-            ps = conexao.prepareStatement("SELECT " + COLUNAS + " FROM Posicao_Ranking WHERE id_posicao = ?");
-            ps.setInt(1, idPosicao);
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                posicaoRanking = mapear(rs, new HashMap<>());
-            }
-
-            rs.close();
-            ps.close();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            fechar();
-        }
-        return posicaoRanking;
+        List<PosicaoRanking> lista = consultar(SELECT_BASE + "WHERE p.id_posicao = ?", idPosicao);
+        return lista.isEmpty() ? null : lista.get(0);
     }
 
     /**
@@ -146,7 +114,7 @@ public class PosicaoRankingDAO {
      * @return lista de posições (pode vir vazia, nunca nula)
      */
     public List<PosicaoRanking> listar() {
-        return consultar("SELECT " + COLUNAS + " FROM Posicao_Ranking ORDER BY id_ranking, nr_posicao", null);
+        return consultar(SELECT_BASE + "ORDER BY p.id_ranking, p.nr_posicao", null);
     }
 
     /**
@@ -156,8 +124,7 @@ public class PosicaoRankingDAO {
      * @return lista de posições (pode vir vazia, nunca nula)
      */
     public List<PosicaoRanking> listarPorRanking(int idRanking) {
-        return consultar("SELECT " + COLUNAS + " FROM Posicao_Ranking WHERE id_ranking = ? ORDER BY nr_posicao",
-                idRanking);
+        return consultar(SELECT_BASE + "WHERE p.id_ranking = ? ORDER BY p.nr_posicao", idRanking);
     }
 
     /**
@@ -178,86 +145,131 @@ public class PosicaoRankingDAO {
         return obterMaximo("SELECT MAX(id_ranking) FROM Posicao_Ranking WHERE id_usuario IS NOT NULL");
     }
 
-    private int obterMaximo(String sql) {
-        conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        int id = 0;
+    // ------------------------------------------------------------------
+    // Métodos internos
+    // ------------------------------------------------------------------
 
-        try {
-            ps = conexao.prepareStatement(sql);
-            rs = ps.executeQuery();
+    private void executarUpdate(String sql, int parametro) {
+        try (Connection conexao = ConnectionFactory.obterConexao();
+             PreparedStatement ps = conexao.prepareStatement(sql)) {
+            ps.setInt(1, parametro);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private int obterMaximo(String sql) {
+        int id = 0;
+        try (Connection conexao = ConnectionFactory.obterConexao();
+             PreparedStatement ps = conexao.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
             if (rs.next()) {
                 id = rs.getInt(1);
             }
-            rs.close();
-            ps.close();
-
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            fechar();
         }
         return id;
     }
 
-    private List<PosicaoRanking> consultar(String sql, Integer idRanking) {
-        conexao = ConnectionFactory.obterConexao();
+    /**
+     * Executa o SELECT com JOIN usando uma única conexão. O parâmetro é
+     * opcional (nulo quando a consulta não tem filtro).
+     */
+    private List<PosicaoRanking> consultar(String sql, Integer parametro) {
         List<PosicaoRanking> lista = new ArrayList<>();
-        PreparedStatement ps = null;
 
-        try {
-            ps = conexao.prepareStatement(sql);
-            if (idRanking != null) {
-                ps.setInt(1, idRanking);
-            }
-            ResultSet rs = ps.executeQuery();
+        try (Connection conexao = ConnectionFactory.obterConexao();
+             PreparedStatement ps = conexao.prepareStatement(sql)) {
 
-            Map<Integer, Ranking> cacheRankings = new HashMap<>();
-            while (rs.next()) {
-                lista.add(mapear(rs, cacheRankings));
+            if (parametro != null) {
+                ps.setInt(1, parametro);
             }
 
-            rs.close();
-            ps.close();
+            try (ResultSet rs = ps.executeQuery()) {
+                // Reaproveita o mesmo objeto Ranking / Grupo entre linhas iguais.
+                Map<Integer, Ranking> cacheRankings = new HashMap<>();
+                Map<Integer, Grupo> cacheGrupos = new HashMap<>();
+
+                while (rs.next()) {
+                    lista.add(mapear(rs, cacheRankings, cacheGrupos));
+                }
+            }
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            fechar();
         }
         return lista;
     }
 
     /**
-     * Monta a posição a partir da linha atual (colunas lidas pelo nome). O
-     * ranking é carregado uma única vez por consulta (cache por id).
+     * Monta a posição a partir da linha atual do JOIN. Não faz nenhuma
+     * consulta adicional ao banco.
      */
-    private PosicaoRanking mapear(ResultSet rs, Map<Integer, Ranking> cacheRankings) throws SQLException {
+    private PosicaoRanking mapear(ResultSet rs, Map<Integer, Ranking> cacheRankings,
+                                  Map<Integer, Grupo> cacheGrupos) throws SQLException {
         PosicaoRanking posicaoRanking = new PosicaoRanking();
         posicaoRanking.setIdPosicao(rs.getInt("id_posicao"));
         posicaoRanking.setPosicao(rs.getInt("nr_posicao"));
         posicaoRanking.setPontuacao(rs.getInt("nr_pontuacao"));
 
-        int idRanking = rs.getInt("id_ranking");
+        // Ranking (JOIN obrigatório)
+        int idRanking = rs.getInt("r_id");
         if (idRanking > 0) {
-            if (!cacheRankings.containsKey(idRanking)) {
-                cacheRankings.put(idRanking, new RankingDAO().buscarPorId(idRanking));
+            Ranking ranking = cacheRankings.get(idRanking);
+            if (ranking == null) {
+                ranking = new Ranking();
+                ranking.setIdRanking(idRanking);
+                ranking.setTipo(TipoRankingEnum.valueOf(rs.getString("r_tipo")));
+                if (rs.getDate("r_inicio") != null) {
+                    ranking.setDataInicio(rs.getDate("r_inicio").toLocalDate());
+                }
+                if (rs.getDate("r_fim") != null) {
+                    ranking.setDataFim(rs.getDate("r_fim").toLocalDate());
+                }
+                ranking.setStatus(StatusRankingEnum.valueOf(rs.getString("r_status")));
+                cacheRankings.put(idRanking, ranking);
             }
-            posicaoRanking.setRanking(cacheRankings.get(idRanking));
+            posicaoRanking.setRanking(ranking);
         }
 
-        int idUsuario = rs.getInt("id_usuario");
+        // Usuário (LEFT JOIN: só vem preenchido nas posições de usuário)
+        int idUsuario = rs.getInt("u_id");
         if (idUsuario > 0) {
-            UsuarioComumDAO usuarioDAO = new UsuarioComumDAO();
-            UsuarioComum usuario = usuarioDAO.buscarPorId(idUsuario);
+            UsuarioComum usuario = new UsuarioComum();
+            usuario.setIdUsuario(idUsuario);
+            usuario.setNome(rs.getString("u_nome"));
+            usuario.setCpf(rs.getString("u_cpf"));
+            usuario.setDataNascimento(rs.getDate("u_nascimento").toLocalDate());
+            usuario.setEmail(rs.getString("u_email"));
+            usuario.setSenha(rs.getString("u_senha"));
+            usuario.setNivelAcesso(rs.getInt("u_nivel"));
+            usuario.setStatusConta(StatusContaEnum.valueOf(rs.getString("u_status")));
+
+            // Igual ao UsuarioComumDAO.buscarPorId: só guarda o id do grupo do usuário.
+            int idGrupoUsuario = rs.getInt("u_grupo");
+            if (idGrupoUsuario > 0) {
+                Grupo grupoDoUsuario = new Grupo();
+                grupoDoUsuario.setIdGrupo(idGrupoUsuario);
+                usuario.setGrupo(grupoDoUsuario);
+            }
             posicaoRanking.setUsuario(usuario);
         }
 
-        int idGrupo = rs.getInt("id_grupo");
+        // Grupo (LEFT JOIN: só vem preenchido nas posições de grupo)
+        int idGrupo = rs.getInt("g_id");
         if (idGrupo > 0) {
-            GrupoDAO grupoDAO = new GrupoDAO();
-            Grupo grupo = grupoDAO.buscarPorId(idGrupo);
+            Grupo grupo = cacheGrupos.get(idGrupo);
+            if (grupo == null) {
+                grupo = new Grupo();
+                grupo.setIdGrupo(idGrupo);
+                grupo.setNome(rs.getString("g_nome"));
+                grupo.setDataCriacao(rs.getDate("g_criacao").toLocalDate());
+                grupo.setQtdUsuarios(rs.getInt("g_qtd"));
+                grupo.setStatusGrupo(rs.getInt("g_status"));
+                cacheGrupos.put(idGrupo, grupo);
+            }
             posicaoRanking.setGrupo(grupo);
         }
         return posicaoRanking;
@@ -268,16 +280,6 @@ public class PosicaoRankingDAO {
             ps.setNull(indice, Types.INTEGER);
         } else {
             ps.setInt(indice, valor);
-        }
-    }
-
-    private void fechar() {
-        try {
-            if (conexao != null && !conexao.isClosed()) {
-                conexao.close();
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
     }
 }

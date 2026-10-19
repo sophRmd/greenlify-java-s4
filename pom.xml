@@ -93,10 +93,7 @@
 						</configuration>
 					</execution>
 				</executions>
-                <configuration>
-                    <source>7</source>
-                    <target>7</target>
-                </configuration>
+
             </plugin>
 		</plugins>
 	</build>
