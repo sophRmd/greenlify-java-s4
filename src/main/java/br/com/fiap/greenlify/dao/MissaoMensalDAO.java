@@ -19,8 +19,6 @@ import java.util.List;
  * {@code Missao} e {@code Missao_Mensal}.
  */
 public class MissaoMensalDAO {
-    private Connection conexao;
-
     /**
      * Cadastra uma nova missão mensal, inserindo os dados básicos na
      * tabela {@code Missao} e os dados específicos na tabela
@@ -35,7 +33,7 @@ public class MissaoMensalDAO {
             return;
         }
 
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement psMissao = null;
         PreparedStatement psMensal = null;
 
@@ -106,7 +104,7 @@ public class MissaoMensalDAO {
             return;
         }
 
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement psMissao = null;
         PreparedStatement psMensal = null;
 
@@ -164,7 +162,7 @@ public class MissaoMensalDAO {
      * @param mensal missão mensal a ser removida
      */
     public void excluir(MissaoMensal mensal) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement psMissao = null;
         PreparedStatement psMensal = null;
 

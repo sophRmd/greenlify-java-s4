@@ -27,7 +27,6 @@ import java.util.List;
  * colunas depois — não há necessidade de atualizá-las em {@link #alterar}.
  */
 public class AdminDAO {
-    private Connection conexao;
 
     /**
      * Cadastra um novo administrador no banco de dados.
@@ -35,7 +34,7 @@ public class AdminDAO {
      * @param usuario administrador a ser cadastrado
      */
     public void cadastrar(Admin usuario) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -78,7 +77,7 @@ public class AdminDAO {
      * @param usuario administrador com os dados atualizados
      */
     public void alterar(Admin usuario) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -114,7 +113,7 @@ public class AdminDAO {
      * @param idUsuario identificador do administrador a ser removido
      */
     public void excluir(int idUsuario) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -143,7 +142,7 @@ public class AdminDAO {
      * @return o administrador encontrado, ou {@code null} caso não exista
      */
     public Admin buscarPorId(int idUsuario) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
         Admin usuario = null;
 
@@ -190,7 +189,7 @@ public class AdminDAO {
      *         credenciais não confiram com nenhum registro
      */
     public Admin buscarPorEmailESenha(String email, String senha) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
         Admin usuario = null;
 
@@ -260,7 +259,7 @@ public class AdminDAO {
     }
 
     public void alterarSenha(Admin admin){
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {

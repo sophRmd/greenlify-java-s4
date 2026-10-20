@@ -17,15 +17,13 @@ import java.util.List;
  * persistência de {@link Carteira} na tabela {@code Carteira}.
  */
 public class CarteiraDAO {
-    private Connection conexao;
-
     /**
      * Cadastra uma nova carteira, vinculada ao usuário informado.
      *
      * @param carteira carteira a ser cadastrada
      */
     public void cadastrar(Carteira carteira) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -59,7 +57,7 @@ public class CarteiraDAO {
      * @param carteira carteira com os dados atualizados
      */
     public void alterar(Carteira carteira) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -102,7 +100,7 @@ public class CarteiraDAO {
      * @param idCarteira identificador da carteira a ser removida
      */
     public void excluir(int idCarteira) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -237,7 +235,7 @@ public class CarteiraDAO {
      * @param carteira carteira com o novo saldo de pontos
      */
     public void atualizarSaldoPontos(Carteira carteira) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {

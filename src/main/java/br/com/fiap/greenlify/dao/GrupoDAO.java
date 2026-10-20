@@ -15,8 +15,6 @@ import java.util.List;
  * persistência de {@link Grupo} na tabela {@code Grupo}.
  */
 public class GrupoDAO {
-    private Connection conexao;
-
     /**
      * Cadastra um novo grupo, preenchendo o identificador gerado
      * automaticamente pelo banco de dados no próprio objeto.
@@ -24,7 +22,7 @@ public class GrupoDAO {
      * @param grupo grupo a ser cadastrado
      */
     public void cadastrar(Grupo grupo) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -64,7 +62,7 @@ public class GrupoDAO {
      * @param grupo grupo com os dados atualizados
      */
     public void alterar(Grupo grupo) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -99,7 +97,7 @@ public class GrupoDAO {
      * @param idGrupo identificador do grupo a ser removido
      */
     public void excluir(int idGrupo) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -129,7 +127,7 @@ public class GrupoDAO {
      * @return o grupo encontrado, ou {@code null} caso não exista
      */
     public Grupo buscarPorId(int idGrupo) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
         Grupo grupo = null;
 
@@ -170,7 +168,7 @@ public class GrupoDAO {
      * @return lista de grupos cadastrados
      */
     public List<Grupo> listar() {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         List<Grupo> lista = new ArrayList<>();
         PreparedStatement ps = null;
 

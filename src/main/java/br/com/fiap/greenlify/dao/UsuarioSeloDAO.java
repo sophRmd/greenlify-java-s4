@@ -19,15 +19,13 @@ import java.util.List;
  * por um usuário em uma determinada data.
  */
 public class UsuarioSeloDAO {
-    private Connection conexao;
-
     /**
      * Registra a coleta de um selo por um usuário.
      *
      * @param usuarioSelo dados da coleta (usuário, selo e data)
      */
     public void cadastrar(UsuarioSelo usuarioSelo) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -59,7 +57,7 @@ public class UsuarioSeloDAO {
      * @param usuarioSelo dados atualizados (o id é usado como referência)
      */
     public void alterar(UsuarioSelo usuarioSelo) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -92,7 +90,7 @@ public class UsuarioSeloDAO {
      * @param idUsuarioSelo id do registro a ser excluído
      */
     public void excluir(int idUsuarioSelo) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {

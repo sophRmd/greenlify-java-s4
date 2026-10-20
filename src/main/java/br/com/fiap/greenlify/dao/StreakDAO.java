@@ -17,7 +17,6 @@ import java.sql.SQLException;
  * consecutivos com atividade (equivalente a {@link Streak#getSequenciaAtual()}).</p>
  */
 public class StreakDAO {
-    private Connection conexao;
 
     /**
      * Cadastra um novo registro na tabela Sequencia para o usuário.
@@ -26,7 +25,7 @@ public class StreakDAO {
      * @param idUsuario identificador do usuário (usado para id_sequencia e id_usuario)
      */
     public void cadastrar(Streak streak, int idUsuario) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -65,7 +64,7 @@ public class StreakDAO {
      * @param idUsuario identificador do usuário
      */
     public void atualizar(Streak streak, int idUsuario) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -103,7 +102,7 @@ public class StreakDAO {
      * @return o objeto Streak preenchido, ou null caso não seja encontrado
      */
     public Streak buscarPorIdUsuario(int idUsuario) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         Streak streak = null;
         PreparedStatement ps = null;
 

@@ -19,7 +19,6 @@ import java.util.List;
  * {@code Perfil_Sustentavel}.
  */
 public class PerfilSustentavelDAO {
-    private Connection conexao;
 
     /**
      * Cadastra um novo perfil sustentável, vinculado ao usuário e ao
@@ -28,7 +27,7 @@ public class PerfilSustentavelDAO {
      * @param perfil perfil sustentável a ser cadastrado
      */
     public void cadastrar(PerfilSustentavel perfil) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -62,7 +61,7 @@ public class PerfilSustentavelDAO {
      * @param perfil perfil sustentável com os dados atualizados
      */
     public void alterar(PerfilSustentavel perfil) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -100,7 +99,7 @@ public class PerfilSustentavelDAO {
      * @param idPerfil identificador do perfil sustentável a ser removido
      */
     public void excluir(int idPerfil) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {

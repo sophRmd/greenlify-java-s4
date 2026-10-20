@@ -20,8 +20,6 @@ import java.util.List;
  * {@code Missao} e {@code Missao_Continua}.
  */
 public class MissaoContinuaDAO {
-    private Connection conexao;
-
     /**
      * Cadastra uma nova missão contínua, inserindo os dados básicos na
      * tabela {@code Missao} e os dados específicos na tabela
@@ -32,7 +30,7 @@ public class MissaoContinuaDAO {
      * @param pontuacao pontuação a ser associada à missão
      */
     public void cadastrarMissao(Missao missao, MissaoContinua continua, Pontuacao pontuacao) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement psMissao = null;
         PreparedStatement psContinua = null;
 
@@ -100,7 +98,7 @@ public class MissaoContinuaDAO {
      * @param missao   dados básicos da missão a serem atualizados
      */
     public void alterar(MissaoContinua continua, Missao missao) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement psMissao = null;
         PreparedStatement psContinua = null;
 
@@ -160,7 +158,7 @@ public class MissaoContinuaDAO {
      * @param continua missão contínua a ser removida
      */
     public void excluir(MissaoContinua continua) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement psMissao = null;
         PreparedStatement psContinua = null;
 
@@ -209,7 +207,7 @@ public class MissaoContinuaDAO {
      *         valores padrão caso o identificador não seja encontrado
      */
     public MissaoContinua buscarPorId(Integer idMissao) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         MissaoContinua continua = null;
 
         String sql = "SELECT m.id_missao, m.nm_missao, m.ds_missao, " +
@@ -279,7 +277,7 @@ public class MissaoContinuaDAO {
      * @return lista de missões contínuas cadastradas
      */
     public List<MissaoContinua> listar() {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         List<MissaoContinua> continuas = new ArrayList<>();
 
         String sql = "SELECT m.id_missao, m.nm_missao, m.ds_missao, " +

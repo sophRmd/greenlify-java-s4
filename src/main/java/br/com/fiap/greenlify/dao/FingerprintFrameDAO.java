@@ -15,7 +15,6 @@ import java.util.List;
  * pertence a uma Fingerprint, referenciada pela coluna id_fingerprint.
  */
 public class FingerprintFrameDAO {
-    private Connection conexao;
 
     /**
      * Cadastra um novo frame de fingerprint.
@@ -24,7 +23,7 @@ public class FingerprintFrameDAO {
      * @param frame dados do frame a ser cadastrado
      */
     public void cadastrar(FingerprintFrame frame) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -68,7 +67,7 @@ public class FingerprintFrameDAO {
      * @param frame dados atualizados do frame (o id é usado como referência)
      */
     public void alterar(FingerprintFrame frame) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -105,7 +104,7 @@ public class FingerprintFrameDAO {
      * @param idFingerprintFrame id do frame a ser removido
      */
     public void excluir(int idFingerprintFrame) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -134,7 +133,7 @@ public class FingerprintFrameDAO {
      * @return o frame encontrado, ou {@code null} caso não exista
      */
     public FingerprintFrame buscarPorId(int idFingerprintFrame) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
         FingerprintFrame frame = null;
 
@@ -179,7 +178,7 @@ public class FingerprintFrameDAO {
      * @return lista de frames (pode vir vazia, nunca nula)
      */
     public List<FingerprintFrame> listar() {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         List<FingerprintFrame> frames = new ArrayList<>();
         PreparedStatement ps = null;
 
@@ -227,7 +226,7 @@ public class FingerprintFrameDAO {
      * @return lista de frames (pode vir vazia, nunca nula)
      */
     public List<FingerprintFrame> listarPorFingerprint(int idFingerprint) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         List<FingerprintFrame> frames = new ArrayList<>();
         PreparedStatement ps = null;
 

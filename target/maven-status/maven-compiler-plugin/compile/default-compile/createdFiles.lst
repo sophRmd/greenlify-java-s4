@@ -1,0 +1,3 @@
+br\com\fiap\greenlify\dto\RankingAllTimeResponseDTO.class
+br\com\fiap\greenlify\controller\RankingAllTimeController.class
+br\com\fiap\greenlify\service\RankingAllTimeService.class

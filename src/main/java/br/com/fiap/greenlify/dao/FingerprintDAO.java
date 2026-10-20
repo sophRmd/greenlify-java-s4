@@ -16,7 +16,6 @@ import java.util.List;
  * persistência de {@link Fingerprint} na tabela {@code Fingerprint}.
  */
 public class FingerprintDAO {
-    private Connection conexao;
 
     /**
      * Cadastra uma nova fingerprint, vinculada ao upload informado.
@@ -24,7 +23,7 @@ public class FingerprintDAO {
      * @param fingerprint fingerprint a ser cadastrada
      */
     public void cadastrar(Fingerprint fingerprint) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -57,7 +56,7 @@ public class FingerprintDAO {
      * @param fingerprint fingerprint com os dados atualizados
      */
     public void alterar(Fingerprint fingerprint) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -89,7 +88,7 @@ public class FingerprintDAO {
      * @param idFingerprint identificador da fingerprint a ser removida
      */
     public void excluir(Integer idFingerprint) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -118,7 +117,7 @@ public class FingerprintDAO {
      * @return a fingerprint encontrada, ou {@code null} caso não exista
      */
     public Fingerprint buscarPorId(Integer idFingerprint) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         Fingerprint fingerprint = null;
         PreparedStatement ps = null;
 
@@ -164,7 +163,7 @@ public class FingerprintDAO {
      * @return lista de fingerprints cadastradas
      */
     public List<Fingerprint> listar() {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         List<Fingerprint> lista = new ArrayList<>();
         PreparedStatement ps = null;
 

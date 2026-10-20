@@ -1,181 +1,184 @@
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\CarteiraController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\ContaLuzController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\FingerprintController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\FingerprintFrameController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\GrupoController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\MissaoContinuaController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\MissaoMensalController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\NivelContribuicaoController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\PagamentoContaController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\PerfilSustentavelController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\PontuacaoController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\PosicaoRankingController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\RankingController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\RecompensaController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\ResgateController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\ResumoController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\SeloController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\StreakController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\UploadController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\UsuarioController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\UsuarioMissaoController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\UsuarioSeloController.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\AdminDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\CarteiraDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\ConnectionFactory.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\ContaLuzDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\FingerprintDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\FingerprintFrameDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\GrupoDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\MissaoContinuaDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\MissaoMensalDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\NivelContribuicaoDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\PagamentoContaDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\PerfilSustentavelDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\PontuacaoDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\PosicaoRankingDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\RankingDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\RecompensaDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\ResgateDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\SeloDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\StreakDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\UploadDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\UsuarioComumDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\UsuarioMissaoDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\UsuarioSeloDAO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\CarteiraRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\CarteiraResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\ContalLuzResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\ContaLuzRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\FingerprintFrameRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\FingerprintFrameResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\FingerprintRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\FingerprintResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\GrupoRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\GrupoResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoContinuaCompletaRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoContinuaCompletaResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoContinuaResumidaRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoContinuaResumidaResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoMensalCompletaRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoMensalCompletaResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoMensalResumidaRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoMensalResumidaResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\NivelContribuicaoRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\NivelContribuicaoResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PagamentoContaRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PagamentoContaResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PerfilSustentavelRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PerfilSustentavelResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PontuacaoRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PontuacaoResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PosicaoRankingGrupoRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PosicaoRankingGrupoResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PosicaoRankingIndividualRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PosicaoRankingIndividualResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\RankingRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\RankingResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\RecompensaRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\RecompensaResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\ResgateRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\ResgateResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\ResumoGrupoResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\ResumoImpactoResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\ResumoMissoesResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\SeloRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\SeloResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\StreakRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\StreakResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UploadRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UploadResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UsuarioCadastroRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UsuarioCadastroResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UsuarioMissaoRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UsuarioMissaoResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UsuarioResumoDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UsuarioSeloRequestDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UsuarioSeloResponseDTO.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\CategoriaEnum.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\DificuldadeEnum.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\ImpactoEnum.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\StatusContaEnum.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\StatusRankingEnum.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\StatusUploadEnum.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\TipoMetricaEnum.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\TipoMissaoEnum.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\TipoRankingEnum.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\GreenlifyApplication.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\CarteiraMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\ContaLuzMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\FingerprintFrameMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\FingerprintMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\GrupoMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\MissaoContinuaCompletaMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\MissaoContinuaResumidaMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\MissaoMensalCompletaMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\MissaoMensalResumidaMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\NivelContribuicaoMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\PagamentoContaMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\PerfilSustentavelMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\PontuacaoMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\PosicaoRankingGrupoMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\PosicaoRankingIndividualMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\RankingMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\RecompensaMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\ReferenciaMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\ResgateMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\SeloMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\StreakMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\UploadMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\UsuarioCadastroMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\UsuarioMissaoMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\UsuarioResumoMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\UsuarioSeloMapper.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Admin.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Carteira.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\ContaLuz.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Fingerprint.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\FingerprintFrame.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Grupo.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Missao.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\MissaoContinua.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\MissaoMensal.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\NivelContribuicao.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\PagamentoConta.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\PerfilSustentavel.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Pontuacao.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\PosicaoRanking.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Ranking.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Recompensa.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Resgate.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Selo.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Streak.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Upload.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Usuario.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\UsuarioComum.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\UsuarioMissao.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\UsuarioSelo.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\CarteiraService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\ContaLuzService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\FingerprintFrameService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\FingerprintService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\GrupoService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\MissaoContinuaService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\MissaoMensalService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\NivelContribuicaoService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\PagamentoContaService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\PerfilSustentavelService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\PontuacaoService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\PosicaoRankingService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\RankingService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\RecompensaService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\ResgateService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\ResumoService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\SeloService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\StreakService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\UploadService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\UsuarioMissaoService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\UsuarioSeloService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\UsuarioService.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\util\FrameComparavel.java
-C:\fiap\challenge4\java\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\util\ValidadorEntrada.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\CarteiraController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\ContaLuzController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\FingerprintController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\FingerprintFrameController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\GrupoController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\MissaoContinuaController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\MissaoMensalController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\NivelContribuicaoController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\PagamentoContaController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\PerfilSustentavelController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\PontuacaoController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\PosicaoRankingController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\RankingAllTimeController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\RankingController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\RecompensaController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\ResgateController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\ResumoController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\SeloController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\StreakController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\UploadController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\UsuarioController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\UsuarioMissaoController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\controller\UsuarioSeloController.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\AdminDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\CarteiraDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\ConnectionFactory.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\ContaLuzDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\FingerprintDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\FingerprintFrameDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\GrupoDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\MissaoContinuaDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\MissaoMensalDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\NivelContribuicaoDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\PagamentoContaDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\PerfilSustentavelDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\PontuacaoDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\PosicaoRankingDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\RankingDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\RecompensaDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\ResgateDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\SeloDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\StreakDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\UploadDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\UsuarioComumDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\UsuarioMissaoDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dao\UsuarioSeloDAO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\CarteiraRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\CarteiraResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\ContalLuzResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\ContaLuzRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\FingerprintFrameRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\FingerprintFrameResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\FingerprintRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\FingerprintResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\GrupoRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\GrupoResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoContinuaCompletaRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoContinuaCompletaResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoContinuaResumidaRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoContinuaResumidaResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoMensalCompletaRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoMensalCompletaResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoMensalResumidaRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\MissaoMensalResumidaResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\NivelContribuicaoRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\NivelContribuicaoResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PagamentoContaRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PagamentoContaResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PerfilSustentavelRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PerfilSustentavelResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PontuacaoRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PontuacaoResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PosicaoRankingGrupoRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PosicaoRankingGrupoResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PosicaoRankingIndividualRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\PosicaoRankingIndividualResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\RankingAllTimeResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\RankingRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\RankingResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\RecompensaRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\RecompensaResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\ResgateRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\ResgateResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\ResumoGrupoResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\ResumoImpactoResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\ResumoMissoesResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\SeloRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\SeloResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\StreakRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\StreakResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UploadRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UploadResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UsuarioCadastroRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UsuarioCadastroResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UsuarioMissaoRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UsuarioMissaoResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UsuarioResumoDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UsuarioSeloRequestDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\dto\UsuarioSeloResponseDTO.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\CategoriaEnum.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\DificuldadeEnum.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\ImpactoEnum.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\StatusContaEnum.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\StatusRankingEnum.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\StatusUploadEnum.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\TipoMetricaEnum.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\TipoMissaoEnum.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\enums\TipoRankingEnum.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\GreenlifyApplication.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\CarteiraMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\ContaLuzMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\FingerprintFrameMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\FingerprintMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\GrupoMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\MissaoContinuaCompletaMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\MissaoContinuaResumidaMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\MissaoMensalCompletaMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\MissaoMensalResumidaMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\NivelContribuicaoMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\PagamentoContaMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\PerfilSustentavelMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\PontuacaoMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\PosicaoRankingGrupoMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\PosicaoRankingIndividualMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\RankingMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\RecompensaMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\ReferenciaMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\ResgateMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\SeloMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\StreakMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\UploadMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\UsuarioCadastroMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\UsuarioMissaoMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\UsuarioResumoMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\mapper\UsuarioSeloMapper.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Admin.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Carteira.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\ContaLuz.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Fingerprint.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\FingerprintFrame.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Grupo.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Missao.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\MissaoContinua.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\MissaoMensal.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\NivelContribuicao.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\PagamentoConta.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\PerfilSustentavel.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Pontuacao.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\PosicaoRanking.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Ranking.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Recompensa.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Resgate.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Selo.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Streak.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Upload.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\Usuario.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\UsuarioComum.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\UsuarioMissao.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\models\UsuarioSelo.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\CarteiraService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\ContaLuzService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\FingerprintFrameService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\FingerprintService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\GrupoService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\MissaoContinuaService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\MissaoMensalService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\NivelContribuicaoService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\PagamentoContaService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\PerfilSustentavelService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\PontuacaoService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\PosicaoRankingService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\RankingAllTimeService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\RankingService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\RecompensaService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\ResgateService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\ResumoService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\SeloService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\StreakService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\UploadService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\UsuarioMissaoService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\UsuarioSeloService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\service\UsuarioService.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\util\FrameComparavel.java
+C:\fiap\challenge4\java\entrega next\greenlify\greenlify\src\main\java\br\com\fiap\greenlify\util\ValidadorEntrada.java

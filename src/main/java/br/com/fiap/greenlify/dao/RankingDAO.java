@@ -17,7 +17,6 @@ import java.util.List;
  * persistência de {@link Ranking} na tabela {@code Ranking}.
  */
 public class RankingDAO {
-    private Connection conexao;
 
     private static final String COLUNAS = "id_ranking, ds_tipo, dt_inicio, dt_fim, ds_status";
 
@@ -28,7 +27,7 @@ public class RankingDAO {
      * @param ranking ranking a ser cadastrado
      */
     public void cadastrar(Ranking ranking) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -67,7 +66,7 @@ public class RankingDAO {
      * @param ranking ranking com os novos dados (o id define qual será atualizado)
      */
     public void alterar(Ranking ranking) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -101,7 +100,7 @@ public class RankingDAO {
      * @param idRanking identificador do ranking a ser excluído
      */
     public void excluir(int idRanking) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -130,7 +129,7 @@ public class RankingDAO {
      * @return o ranking encontrado, ou {@code null} caso não exista
      */
     public Ranking buscarPorId(int idRanking) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
         Ranking ranking = null;
 
@@ -166,7 +165,7 @@ public class RankingDAO {
      * @return lista de rankings (pode vir vazia, nunca nula)
      */
     public List<Ranking> listar() {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         List<Ranking> lista = new ArrayList<>();
         PreparedStatement ps = null;
 

@@ -14,7 +14,6 @@ import java.util.List;
  * persistência de {@link ContaLuz} na tabela {@code Conta_Luz}.
  */
 public class ContaLuzDAO {
-    private Connection conexao;
 
     /**
      * Cadastra uma nova conta de luz.
@@ -22,7 +21,7 @@ public class ContaLuzDAO {
      * @param conta conta de luz a ser cadastrada
      */
     public void cadastrar(ContaLuz conta) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -54,7 +53,7 @@ public class ContaLuzDAO {
      * @param conta conta de luz com os dados atualizados
      */
     public void alterar(ContaLuz conta) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -86,7 +85,7 @@ public class ContaLuzDAO {
      * @param idContaLuz identificador da conta de luz a ser removida
      */
     public void excluir(int idContaLuz) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -115,7 +114,7 @@ public class ContaLuzDAO {
      * @return a conta de luz encontrada, ou {@code null} caso não exista
      */
     public ContaLuz buscarPorId(int idContaLuz) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
         ContaLuz conta = null;
 
@@ -154,7 +153,7 @@ public class ContaLuzDAO {
      * @return lista de contas de luz cadastradas
      */
     public List<ContaLuz> listar() {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         List<ContaLuz> contas = new ArrayList<>();
         PreparedStatement ps = null;
 

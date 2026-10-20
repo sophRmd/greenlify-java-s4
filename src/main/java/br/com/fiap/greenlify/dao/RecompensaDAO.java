@@ -16,7 +16,6 @@ import java.util.List;
  * feitas diretamente via JDBC, sem uso de ORM.
  */
 public class RecompensaDAO {
-    private Connection conexao;
 
     /**
      * Insere uma nova recompensa no banco de dados.
@@ -24,7 +23,7 @@ public class RecompensaDAO {
      * @param recompensa objeto contendo os dados da recompensa a ser cadastrada
      */
     public void cadastrar(Recompensa recompensa) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -58,7 +57,7 @@ public class RecompensaDAO {
      * @param recompensa objeto com os dados atualizados (o id é usado como referência)
      */
     public void alterar(Recompensa recompensa) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -92,7 +91,7 @@ public class RecompensaDAO {
      * @param idRecompensa id da recompensa a ser excluída
      */
     public void excluir(int idRecompensa) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {

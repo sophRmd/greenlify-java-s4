@@ -16,7 +16,6 @@ import java.util.List;
  * persistência de {@link Pontuacao} na tabela {@code Pontuacao}.
  */
 public class PontuacaoDAO {
-    private Connection conexao;
 
     /**
      * Cadastra uma nova pontuação.
@@ -24,7 +23,7 @@ public class PontuacaoDAO {
      * @param pontuacao pontuação a ser cadastrada
      */
     public void cadastrar(Pontuacao pontuacao) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -58,7 +57,7 @@ public class PontuacaoDAO {
      * @param pontuacao pontuação com os dados atualizados
      */
     public void alterar(Pontuacao pontuacao) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -92,7 +91,7 @@ public class PontuacaoDAO {
      * @param idPontuacao identificador da pontuação a ser removida
      */
     public void excluir(int idPontuacao) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -121,7 +120,7 @@ public class PontuacaoDAO {
      * @return a pontuação encontrada, ou {@code null} caso não exista
      */
     public Pontuacao buscarPorId(int idPontuacao) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
         Pontuacao pontuacao = null;
 
@@ -164,7 +163,7 @@ public class PontuacaoDAO {
      * @return a pontuação encontrada, ou {@code null} caso não exista
      */
     public Pontuacao buscarPorImpactoEDificuldade(String impacto, String dificuldade) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
         Pontuacao pontuacao = null;
 

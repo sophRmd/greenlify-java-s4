@@ -18,8 +18,6 @@ import java.util.List;
  * (diferenciando-o de contas administrativas na mesma tabela Usuario).
  */
 public class UsuarioComumDAO {
-    private Connection conexao;
-
     /**
      * Cadastra um novo usuário comum. Se o usuário tiver um grupo associado,
      * o id_grupo também é gravado; caso contrário, a coluna fica de fora do INSERT.
@@ -28,7 +26,7 @@ public class UsuarioComumDAO {
      * @param usuario dados do usuário a ser cadastrado
      */
     public void cadastrar(UsuarioComum usuario) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -92,7 +90,7 @@ public class UsuarioComumDAO {
      * @param usuario dados atualizados do usuário (o id é usado como referência)
      */
     public void alterar(UsuarioComum usuario) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -146,7 +144,7 @@ public class UsuarioComumDAO {
      * @param idUsuario id do usuário a ser removido
      */
     public void excluir(int idUsuario) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -175,7 +173,7 @@ public class UsuarioComumDAO {
      * @return o usuário encontrado, ou {@code null} caso não exista (ou não seja um usuário comum)
      */
     public UsuarioComum buscarPorId(int idUsuario) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
         UsuarioComum usuario = null;
 
@@ -226,7 +224,7 @@ public class UsuarioComumDAO {
      * @return lista de usuários comuns (pode vir vazia, nunca nula)
      */
     public List<UsuarioComum> listar() {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         List<UsuarioComum> usuarios = new ArrayList<>();
         PreparedStatement ps = null;
 
@@ -282,7 +280,7 @@ public class UsuarioComumDAO {
      * @return o usuário correspondente, ou {@code null} se as credenciais não baterem
      */
     public UsuarioComum buscarPorEmailESenha(String email, String senha) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
         UsuarioComum usuario = null;
 

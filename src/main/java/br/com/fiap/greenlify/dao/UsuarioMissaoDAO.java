@@ -23,8 +23,6 @@ import java.util.Map;
  * 1 id_usuario_missao, 2 nr_tentativas, 3 nr_progresso_atual, 4 id_usuario, 5 id_missao.
  */
 public class UsuarioMissaoDAO {
-    private Connection conexao;
-
     /**
      * Cadastra um novo registro de missão para um usuário. O id_usuario_missao é gerado
      * pelo banco (auto increment), então fica de fora do INSERT e, ao final,
@@ -33,7 +31,7 @@ public class UsuarioMissaoDAO {
      * @param usuarioMissao dados do registro a ser cadastrado
      */
     public void cadastrar(UsuarioMissao usuarioMissao) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -76,7 +74,7 @@ public class UsuarioMissaoDAO {
      * @param usuarioMissao dados atualizados do registro (o id é usado como referência)
      */
     public void alterar(UsuarioMissao usuarioMissao) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -111,7 +109,7 @@ public class UsuarioMissaoDAO {
      * @param idUsuarioMissao id do registro a ser removido
      */
     public void excluir(int idUsuarioMissao) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -140,7 +138,7 @@ public class UsuarioMissaoDAO {
      * @return o registro encontrado, ou {@code null} caso não exista
      */
     public UsuarioMissao buscarPorId(int idUsuarioMissao) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
         UsuarioMissao usuarioMissao = null;
 
@@ -187,7 +185,7 @@ public class UsuarioMissaoDAO {
      * @return lista de registros (pode vir vazia, nunca nula)
      */
     public List<UsuarioMissao> listar() {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         List<UsuarioMissao> usuarioMissoes = new ArrayList<>();
         PreparedStatement ps = null;
 
@@ -237,7 +235,7 @@ public class UsuarioMissaoDAO {
      * @return lista de registros do usuário (pode vir vazia, nunca nula)
      */
     public List<UsuarioMissao> listarPorUsuario(int idUsuario) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         List<UsuarioMissao> usuarioMissoes = new ArrayList<>();
         PreparedStatement ps = null;
 

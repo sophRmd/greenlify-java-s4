@@ -20,7 +20,6 @@ import java.util.List;
  * 1 id_pagamento, 2 dt_pagamento, 3 vl_pago, 4 id_usuario, 5 id_conta_luz.
  */
 public class PagamentoContaDAO {
-    private Connection conexao;
 
     /**
      * Cadastra um novo pagamento. O id_pagamento é gerado pelo banco (auto increment),
@@ -29,7 +28,7 @@ public class PagamentoContaDAO {
      * @param pagamento dados do pagamento a ser cadastrado
      */
     public void cadastrar(PagamentoConta pagamento) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -70,7 +69,7 @@ public class PagamentoContaDAO {
      * @param pagamento dados atualizados do pagamento (o id é usado como referência)
      */
     public void alterar(PagamentoConta pagamento) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -105,7 +104,7 @@ public class PagamentoContaDAO {
      * @param idPagamento id do pagamento a ser removido
      */
     public void excluir(int idPagamento) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -134,7 +133,7 @@ public class PagamentoContaDAO {
      * @return o pagamento encontrado, ou {@code null} caso não exista
      */
     public PagamentoConta buscarPorId(int idPagamento) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
         PagamentoConta pagamento = null;
 
@@ -181,7 +180,7 @@ public class PagamentoContaDAO {
      * @return lista de pagamentos (pode vir vazia, nunca nula)
      */
     public List<PagamentoConta> listar() {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         List<PagamentoConta> pagamentos = new ArrayList<>();
         PreparedStatement ps = null;
 
@@ -231,7 +230,7 @@ public class PagamentoContaDAO {
      * @return lista de pagamentos do usuário (pode vir vazia, nunca nula)
      */
     public List<PagamentoConta> listarPorUsuario(int idUsuario) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         List<PagamentoConta> pagamentos = new ArrayList<>();
         PreparedStatement ps = null;
 

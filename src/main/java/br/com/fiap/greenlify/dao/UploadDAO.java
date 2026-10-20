@@ -23,7 +23,6 @@ import java.util.Map;
  * para validação de uma missão contínua.
  */
 public class UploadDAO {
-    private Connection conexao;
 
     /**
      * Cadastra um novo upload e preenche o id gerado pelo banco no próprio objeto.
@@ -31,7 +30,7 @@ public class UploadDAO {
      * @param upload dados do upload a ser gravado
      */
     public void cadastrar(Upload upload) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement psUpload = null;
 
         try {

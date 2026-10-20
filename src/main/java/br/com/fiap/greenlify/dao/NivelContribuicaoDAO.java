@@ -15,7 +15,6 @@ import java.util.List;
  * {@code Nivel_Contribuicao}.
  */
 public class NivelContribuicaoDAO {
-    private Connection conexao;
 
     /**
      * Cadastra um novo nível de contribuição.
@@ -23,7 +22,7 @@ public class NivelContribuicaoDAO {
      * @param nivel nível de contribuição a ser cadastrado
      */
     public void cadastrar(NivelContribuicao nivel) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -58,7 +57,7 @@ public class NivelContribuicaoDAO {
      * @param nivel nível de contribuição com os dados atualizados
      */
     public void alterar(NivelContribuicao nivel) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -93,7 +92,7 @@ public class NivelContribuicaoDAO {
      * @param idNivel identificador do nível de contribuição a ser removido
      */
     public void excluir(int idNivel) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -122,7 +121,7 @@ public class NivelContribuicaoDAO {
      * @return o nível de contribuição encontrado, ou {@code null} caso não exista
      */
     public NivelContribuicao buscarPorId(int idNivel) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
         NivelContribuicao nivel = null;
 
@@ -164,7 +163,7 @@ public class NivelContribuicaoDAO {
      * @return lista de níveis de contribuição cadastrados
      */
     public List<NivelContribuicao> listar() {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         List<NivelContribuicao> niveis = new ArrayList<>();
         PreparedStatement ps = null;
 

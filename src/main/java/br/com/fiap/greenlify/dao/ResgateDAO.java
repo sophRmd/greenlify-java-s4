@@ -19,7 +19,6 @@ import java.util.List;
  * a concessão de uma recompensa a um usuário.
  */
 public class ResgateDAO {
-    private Connection conexao;
 
     /**
      * Cadastra um novo resgate, vinculando um usuário a uma recompensa
@@ -28,7 +27,7 @@ public class ResgateDAO {
      * @param resgate dados do resgate a ser gravado
      */
     public void cadastrar(Resgate resgate) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -61,7 +60,7 @@ public class ResgateDAO {
      * @param resgate dados atualizados do resgate (o id é usado para localizar o registro)
      */
     public void alterar(Resgate resgate) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -95,7 +94,7 @@ public class ResgateDAO {
      * @param id id do resgate a ser removido
      */
     public void excluir(int id) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {

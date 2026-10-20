@@ -16,7 +16,6 @@ import java.util.List;
  * vale-entrega e crédito de carbono.
  */
 public class SeloDAO{
-    private Connection conexao;
 
     /**
      * Cadastra um novo selo.
@@ -24,7 +23,7 @@ public class SeloDAO{
      * @param selo dados do selo a ser inserido
      */
     public void cadastrar(Selo selo) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -59,7 +58,7 @@ public class SeloDAO{
      * @param selo objeto com os dados atualizados (o id é usado como referência)
      */
     public void alterar(Selo selo) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
@@ -94,7 +93,7 @@ public class SeloDAO{
      * @param idSelo id do selo a ser removido
      */
     public void excluir(int idSelo) {
-        conexao = ConnectionFactory.obterConexao();
+        Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement ps = null;
 
         try {
