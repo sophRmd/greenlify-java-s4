@@ -4,25 +4,20 @@ import br.com.fiap.greenlify.dto.FingerprintFrameRequestDTO;
 import br.com.fiap.greenlify.util.ValidadorEntrada;
 import br.com.fiap.greenlify.dao.FingerprintDAO;
 import br.com.fiap.greenlify.dao.FingerprintFrameDAO;
-import br.com.fiap.greenlify.dao.CarteiraDAO;
 import br.com.fiap.greenlify.dao.MissaoContinuaDAO;
 import br.com.fiap.greenlify.dao.UploadDAO;
 import br.com.fiap.greenlify.dao.UsuarioComumDAO;
-import br.com.fiap.greenlify.dao.UsuarioMissaoDAO;
 import br.com.fiap.greenlify.dto.UploadRequestDTO;
 import br.com.fiap.greenlify.dto.UploadResponseDTO;
 import br.com.fiap.greenlify.enums.StatusContaEnum;
 import br.com.fiap.greenlify.enums.StatusUploadEnum;
 import br.com.fiap.greenlify.enums.TipoMissaoEnum;
-import br.com.fiap.greenlify.mapper.ReferenciaMapper;
 import br.com.fiap.greenlify.mapper.UploadMapper;
-import br.com.fiap.greenlify.models.Carteira;
 import br.com.fiap.greenlify.models.Fingerprint;
 import br.com.fiap.greenlify.models.FingerprintFrame;
 import br.com.fiap.greenlify.models.MissaoContinua;
 import br.com.fiap.greenlify.models.Upload;
 import br.com.fiap.greenlify.models.UsuarioComum;
-import br.com.fiap.greenlify.models.UsuarioMissao;
 import br.com.fiap.greenlify.util.FrameComparavel;
 import org.springframework.stereotype.Service;
 
@@ -42,8 +37,6 @@ public class UploadService {
     private final MissaoContinuaDAO missaoDAO;
     private final FingerprintDAO fingerprintDAO;
     private final FingerprintFrameDAO frameDAO;
-    private final UsuarioMissaoDAO usuarioMissaoDAO;
-    private final CarteiraDAO carteiraDAO;
     private final RankingAllTimeService rankingAllTimeService;
 
     /** Confiança (%) a partir da qual o upload é reprovado por duplicidade. */
@@ -53,14 +46,28 @@ public class UploadService {
     private static final int MAXIMO_FRAMES = 120;
     private static final Pattern PHASH = Pattern.compile("^[0-9a-fA-F]{8,64}$");
 
+    /**
+     * Travas por usuário: envios do mesmo usuário rodam um de cada vez (o mesmo usuário cai
+     * sempre na mesma trava; usuários diferentes só dividem trava por coincidência do resto
+     * da divisão, o que apenas os coloca em fila). A trava no banco (FOR UPDATE, em
+     * {@link UploadDAO#registrarEnvio}) cobre também outras instâncias da aplicação.
+     */
+    private static final Object[] TRAVAS_POR_USUARIO = criarTravas(64);
+
+    private static Object[] criarTravas(int quantidade) {
+        Object[] travas = new Object[quantidade];
+        for (int i = 0; i < quantidade; i++) {
+            travas[i] = new Object();
+        }
+        return travas;
+    }
+
     public UploadService() {
         this.uploadDAO = new UploadDAO();
         this.usuarioDAO = new UsuarioComumDAO();
         this.missaoDAO = new MissaoContinuaDAO();
         this.fingerprintDAO = new FingerprintDAO();
         this.frameDAO = new FingerprintFrameDAO();
-        this.usuarioMissaoDAO = new UsuarioMissaoDAO();
-        this.carteiraDAO = new CarteiraDAO();
         this.rankingAllTimeService = new RankingAllTimeService();
     }
 
@@ -83,113 +90,64 @@ public class UploadService {
      * Registra o envio de uma comprovação: valida o arquivo (regras do model
      * {@link Upload}), compara os frames (pHash e embedding, gerados pela IA)
      * com os de todos os uploads já gravados, define status e confiança de
-     * duplicidade e grava Upload, Fingerprint e Frames.
+     * duplicidade e grava tudo em uma única transação: Upload, Fingerprint, Frames,
+     * progresso na missão e, quando a conclusão é válida, o crédito dos pontos.
+     *
+     * <p>O progresso das missões contínuas é mensal: conta os uploads aprovados no mês
+     * corrente, então o limite de realizações vale por mês e o usuário volta a pontuar
+     * no mês seguinte. Missão concluída atualiza também o ranking geral e o mensal.</p>
      *
      * <p>A IA (Python) ainda não está integrada: hash e frames chegam na requisição.</p>
      *
      * @return o upload gravado, com o resultado da análise
-     * @throws IllegalStateException se o banco não confirmar a gravação
+     * @throws IllegalArgumentException se o envio for inválido ou o limite do mês já foi atingido
+     * @throws IllegalStateException    se o banco falhar (nada é gravado)
      */
     public UploadResponseDTO cadastrar(UploadRequestDTO dto) {
-        validar(dto);
+        if (dto.idUsuario() <= 0) {
+            System.out.println("ERRO: O usuário é obrigatório.");
+            throw new IllegalArgumentException("O usuário é obrigatório.");
+        }
+        synchronized (TRAVAS_POR_USUARIO[dto.idUsuario() % TRAVAS_POR_USUARIO.length]) {
+            return cadastrarSerializado(dto);
+        }
+    }
+
+    private UploadResponseDTO cadastrarSerializado(UploadRequestDTO dto) {
+        MissaoContinua missao = validar(dto);
 
         UsuarioComum usuario = usuarioDAO.buscarPorId(dto.idUsuario());
         Upload upload = new Upload();
         boolean arquivoValido = upload.verificaArquivo(
                 dto.arquivo(), dto.tamanhoMB(), dto.idMissao(), usuario) != null;
 
+        Fingerprint fingerprint = null;
+        List<FingerprintFrame> frames = new ArrayList<>();
         if (arquivoValido) {
             analisarDuplicidade(upload, dto.frames());
-        }
 
-        uploadDAO.cadastrar(upload);
-        if (upload.getIdUpload() <= 0) {
-            throw new IllegalStateException("Não foi possível gravar o upload.");
-        }
-
-        if (arquivoValido) {
-            Fingerprint fingerprint = new Fingerprint();
+            fingerprint = new Fingerprint();
             fingerprint.setHashVideo(dto.hashVideo());
             fingerprint.setDataGeracao(LocalDate.now());
-            fingerprint.setUpload(upload);
-            fingerprintDAO.cadastrar(fingerprint);
-
-            // o DAO não devolve o id gerado; a fingerprint é única por upload
-            Fingerprint gravada = buscarFingerprintDoUpload(upload.getIdUpload());
-            if (gravada == null) {
-                throw new IllegalStateException("Não foi possível gravar a fingerprint do upload.");
-            }
             for (FingerprintFrameRequestDTO f : dto.frames()) {
                 FingerprintFrame frame = new FingerprintFrame();
                 frame.setNumeroFrame(f.numeroFrame());
                 frame.setTempoSegundo(f.tempoSegundo());
                 frame.setpHash(f.pHash());
                 frame.setEmbedding(f.embedding());
-                frame.setFingerprint(gravada);
-                frameDAO.cadastrar(frame);
+                frames.add(frame);
             }
         }
 
-        registrarResultado(usuario, dto.idMissao(), upload.getStatus() == StatusUploadEnum.APROVADO);
+        // Tudo (upload, fingerprint, frames, progresso e crédito) na mesma transação.
+        boolean concluiu = uploadDAO.registrarEnvio(upload, fingerprint, frames, missao);
+
+        if (concluiu) {
+            // Conclusão validada e já gravada: atualiza o ranking geral (all time) e o do mês.
+            rankingAllTimeService.registrarMissaoConcluida(usuario.getIdUsuario());
+        }
 
         return UploadMapper.toDto(upload);
-    }
-
-    /**
-     * Reflete o upload no progresso do usuário na missão: toda tentativa soma em
-     * {@code tentativas}; só upload APROVADO soma em {@code progressoAtual}. Ao
-     * atingir o limite de realizações, a missão é concluída e os pontos dela
-     * vão para a carteira. (Upload parcialmente aprovado aguarda revisão e não
-     * pontua.)
-     */
-    private void registrarResultado(UsuarioComum usuario, int idMissao, boolean aprovado) {
-        int idUsuario = usuario.getIdUsuario();
-        UsuarioMissao andamento = buscarUsuarioMissao(idUsuario, idMissao);
-        if (andamento == null) {
-            andamento = new UsuarioMissao();
-            andamento.setUsuario(ReferenciaMapper.usuario(idUsuario));
-            andamento.setMissao(ReferenciaMapper.missao(idMissao));
-            andamento.setTentativas(1);
-            andamento.setProgressoAtual(aprovado ? 1 : 0);
-            usuarioMissaoDAO.cadastrar(andamento);
-        } else {
-            andamento.setTentativas(andamento.getTentativas() + 1);
-            if (aprovado) {
-                andamento.setProgressoAtual(andamento.getProgressoAtual() + 1);
-            }
-            usuarioMissaoDAO.alterar(andamento);
-        }
-
-        MissaoContinua missao = missaoDAO.buscarPorId(idMissao);
-        if (aprovado && andamento.getProgressoAtual() == missao.getLimiteRealizacoes()) {
-            creditarPontos(usuario, missao.getPontuacao().getValorBase());
-            // missão concluída: guarda a data (ranking do período) e avisa o ranking all time
-            usuarioMissaoDAO.registrarConclusao(andamento.getIdUsuarioMissao(), LocalDate.now());
-            rankingAllTimeService.registrarMissaoConcluida(idUsuario);
-        }
-    }
-
-    private void creditarPontos(UsuarioComum usuario, int pontos) {
-        Carteira carteira = carteiraDAO.buscarPorIdUsuario(usuario.getIdUsuario());
-        if (carteira == null) {
-            // a carteira usa o id do usuário como chave (ver CarteiraDAO.cadastrar)
-            carteira = new Carteira();
-            carteira.setUsuario(usuario);
-            carteira.setIdCarteira(usuario.getIdUsuario());
-            carteiraDAO.cadastrar(carteira);
-        }
-        carteira.setQtdPontos(carteira.getQtdPontos() + pontos);
-        carteira.recalcularValorReal();
-        carteiraDAO.atualizarSaldoPontos(carteira);
-    }
-
-    private UsuarioMissao buscarUsuarioMissao(int idUsuario, int idMissao) {
-        for (UsuarioMissao um : usuarioMissaoDAO.listarPorUsuario(idUsuario)) {
-            if (um.getMissao() != null && um.getMissao().getIdMissao() == idMissao) {
-                return um;
-            }
-        }
-        return null;
     }
 
     /**
@@ -254,16 +212,8 @@ public class UploadService {
         }
     }
 
-    private Fingerprint buscarFingerprintDoUpload(int idUpload) {
-        for (Fingerprint fp : fingerprintDAO.listar()) {
-            if (fp.getUpload() != null && fp.getUpload().getIdUpload() == idUpload) {
-                return fp;
-            }
-        }
-        return null;
-    }
-
-    private void validar(UploadRequestDTO dto) {
+    /** Valida o envio e devolve a missão contínua (já carregada) para quem for gravá-lo. */
+    private MissaoContinua validar(UploadRequestDTO dto) {
         if (dto.arquivo() == null || dto.arquivo().isBlank()) {
             System.out.println("ERRO: O arquivo é obrigatório.");
             throw new IllegalArgumentException("O arquivo é obrigatório.");
@@ -294,10 +244,12 @@ public class UploadService {
             System.out.println("ERRO: Missão informada não existe.");
             throw new IllegalArgumentException("A missão informada não existe.");
         }
-        UsuarioMissao andamento = buscarUsuarioMissao(dto.idUsuario(), dto.idMissao());
-        if (andamento != null && andamento.getProgressoAtual() >= missao.getLimiteRealizacoes()) {
-            System.out.println("ERRO: Missão já concluída pelo usuário.");
-            throw new IllegalArgumentException("O usuário já concluiu essa missão.");
+        // O limite de realizações vale por mês: conta os uploads aprovados do mês corrente.
+        // (A conferência definitiva, sem corrida entre envios simultâneos, é refeita dentro da transação.)
+        if (uploadDAO.contarAprovadosNoCiclo(dto.idUsuario(), dto.idMissao(), LocalDate.now())
+                >= missao.getLimiteRealizacoes()) {
+            System.out.println("ERRO: Missão já concluída pelo usuário neste mês.");
+            throw new IllegalArgumentException("O usuário já concluiu essa missão neste mês.");
         }
 
         // Anti-injection (SQL/HTML/path traversal) e whitelist de campos estruturados
@@ -330,5 +282,6 @@ public class UploadService {
             }
             ValidadorEntrada.embedding(frame.embedding());
         }
+        return missao;
     }
 }

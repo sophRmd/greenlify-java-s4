@@ -2,6 +2,8 @@ package br.com.fiap.greenlify.dao;
 
 import br.com.fiap.greenlify.enums.StatusContaEnum;
 import br.com.fiap.greenlify.models.Grupo;
+import br.com.fiap.greenlify.models.PagamentoConta;
+import br.com.fiap.greenlify.models.PosicaoRanking;
 import br.com.fiap.greenlify.models.Recompensa;
 import br.com.fiap.greenlify.models.Resgate;
 import br.com.fiap.greenlify.models.UsuarioComum;
@@ -11,6 +13,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -177,6 +180,152 @@ public class ResgateDAO {
             e.printStackTrace();
         }
         return lista;
+    }
+
+    // ------------------------------------------------------------------
+    // Prêmios de ranking (uma transação por prêmio)
+    //
+    // O prêmio de um ranking é gravado com dt_concessao = último dia do período
+    // do ranking. Assim a combinação usuário + ranking é identificada pela
+    // dupla (id_usuario, dt_concessao), sem alterar a tabela Resgate.
+    // ------------------------------------------------------------------
+
+    /** Taxa de conversão pontos -> reais, a mesma de Carteira. */
+    private static final double REAIS_POR_PONTO = 0.009052;
+
+    /**
+     * Informa se o usuário já tem resgate na data de concessão (a data final do ranking).
+     */
+    public boolean existePorUsuarioEData(int idUsuario, LocalDate data) {
+        try (Connection con = ConnectionFactory.obterConexao()) {
+            return existe(con, idUsuario, data);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private boolean existe(Connection con, int idUsuario, LocalDate data) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Resgate WHERE id_usuario = ? AND dt_concessao = ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idUsuario);
+            ps.setDate(2, Date.valueOf(data));
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
+    /**
+     * Concede o bônus percentual sobre o saldo da carteira e registra o resgate
+     * na MESMA transação: ou grava os dois ou nenhum.
+     *
+     * @return CONCEDIDA, JA_CONCEDIDA (já havia resgate na data) ou NAO_CONCEDIDA (sem carteira ou erro)
+     */
+    public PosicaoRanking.Resultado concederBonus(Resgate resgate, int percentual) {
+        return executarEmTransacao(resgate, con -> {
+            long saldo;
+            String sqlSaldo = "SELECT nr_saldo_pontos FROM Carteira WHERE id_usuario = ? FOR UPDATE";
+            try (PreparedStatement ps = con.prepareStatement(sqlSaldo)) {
+                ps.setInt(1, resgate.getUsuario().getIdUsuario());
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        return PosicaoRanking.Resultado.NAO_CONCEDIDA;
+                    }
+                    saldo = rs.getInt(1);
+                }
+            }
+
+            long novoSaldo = saldo + (saldo * percentual) / 100;
+            String sqlCarteira = "UPDATE Carteira SET nr_saldo_pontos = ?, vl_pontos_convertidos = ? "
+                    + "WHERE id_usuario = ?";
+            try (PreparedStatement ps = con.prepareStatement(sqlCarteira)) {
+                ps.setLong(1, novoSaldo);
+                ps.setDouble(2, novoSaldo * REAIS_POR_PONTO);
+                ps.setInt(3, resgate.getUsuario().getIdUsuario());
+                ps.executeUpdate();
+            }
+
+            inserir(con, resgate);
+            return PosicaoRanking.Resultado.CONCEDIDA;
+        });
+    }
+
+    /**
+     * Quita a conta de luz (pagamento integral) e registra o resgate na MESMA
+     * transação. A carteira não é tocada.
+     *
+     * @return CONCEDIDA, JA_CONCEDIDA ou NAO_CONCEDIDA (erro de banco)
+     */
+    public PosicaoRanking.Resultado concederPagamentoConta(Resgate resgate, PagamentoConta pagamento) {
+        return executarEmTransacao(resgate, con -> {
+            new PagamentoContaDAO().cadastrar(con, pagamento);
+            inserir(con, resgate);
+            return PosicaoRanking.Resultado.CONCEDIDA;
+        });
+    }
+
+    /** Operação de banco que usa a conexão da transação. */
+    private interface OperacaoTransacional {
+        PosicaoRanking.Resultado executar(Connection con) throws SQLException;
+    }
+
+    /**
+     * Abre a transação, confirma se tudo der certo e desfaz tudo se algo falhar.
+     * Primeiro trava a linha do usuário (FOR UPDATE) e só então confere se o
+     * resgate já existe: duas chamadas simultâneas para o mesmo usuário ficam em
+     * fila, e a segunda enxerga o resgate da primeira, então o prêmio nunca sai duas vezes.
+     */
+    private PosicaoRanking.Resultado executarEmTransacao(Resgate resgate, OperacaoTransacional operacao) {
+        int idUsuario = resgate.getUsuario().getIdUsuario();
+        try (Connection con = ConnectionFactory.obterConexao()) {
+            try {
+                con.setAutoCommit(false);
+
+                try (PreparedStatement ps = con.prepareStatement(
+                        "SELECT id_usuario FROM Usuario WHERE id_usuario = ? FOR UPDATE")) {
+                    ps.setInt(1, idUsuario);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (!rs.next()) {
+                            con.rollback();
+                            return PosicaoRanking.Resultado.NAO_CONCEDIDA;
+                        }
+                    }
+                }
+
+                if (existe(con, idUsuario, resgate.getDataConcessao())) {
+                    con.rollback();
+                    return PosicaoRanking.Resultado.JA_CONCEDIDA;
+                }
+
+                PosicaoRanking.Resultado resultado = operacao.executar(con);
+                if (resultado == PosicaoRanking.Resultado.CONCEDIDA) {
+                    con.commit();
+                } else {
+                    con.rollback();
+                }
+                return resultado;
+            } catch (SQLException e) {
+                con.rollback();
+                e.printStackTrace();
+                return PosicaoRanking.Resultado.NAO_CONCEDIDA;
+            } finally {
+                con.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return PosicaoRanking.Resultado.NAO_CONCEDIDA;
+        }
+    }
+
+    private void inserir(Connection con, Resgate resgate) throws SQLException {
+        String sql = "INSERT INTO Resgate (dt_concessao, id_usuario, id_recompensa) VALUES (?, ?, ?)";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setDate(1, Date.valueOf(resgate.getDataConcessao()));
+            ps.setInt(2, resgate.getUsuario().getIdUsuario());
+            ps.setInt(3, resgate.getRecompensa().getIdRecompensa());
+            ps.executeUpdate();
+        }
     }
 
     private Resgate mapear(ResultSet rs) throws SQLException {

@@ -203,4 +203,24 @@ public class FingerprintDAO {
         }
         return lista;
     }
+
+    /**
+     * Cadastra uma fingerprint usando uma conexão já aberta (para participar da
+     * transação de quem chamou) e preenche o id gerado no próprio objeto. Não faz
+     * commit nem fecha a conexão; erros de SQL sobem para o chamador decidir o rollback.
+     */
+    public void cadastrar(Connection conexao, Fingerprint fingerprint) throws SQLException {
+        String sql = "INSERT INTO Fingerprint (ds_hash_video, dt_geracao, id_upload) VALUES (?, ?, ?)";
+        try (PreparedStatement ps = conexao.prepareStatement(sql, new String[]{"ID_FINGERPRINT"})) {
+            ps.setString(1, fingerprint.getHashVideo());
+            ps.setDate(2, Date.valueOf(fingerprint.getDataGeracao()));
+            ps.setInt(3, fingerprint.getUpload().getIdUpload());
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    fingerprint.setIdFingerprint(rs.getInt(1));
+                }
+            }
+        }
+    }
 }

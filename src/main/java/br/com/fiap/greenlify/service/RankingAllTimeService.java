@@ -1,5 +1,6 @@
 package br.com.fiap.greenlify.service;
 
+import br.com.fiap.greenlify.dao.RankingRedisDAO;
 import br.com.fiap.greenlify.dao.UsuarioComumDAO;
 import br.com.fiap.greenlify.dao.UsuarioMissaoDAO;
 import br.com.fiap.greenlify.dto.RankingAllTimeResponseDTO;
@@ -25,10 +26,12 @@ import java.util.Map;
 public class RankingAllTimeService {
     private final UsuarioMissaoDAO usuarioMissaoDAO;
     private final UsuarioComumDAO usuarioDAO;
+    private final RankingRedisDAO redisDAO;
 
     public RankingAllTimeService() {
         this.usuarioMissaoDAO = new UsuarioMissaoDAO();
         this.usuarioDAO = new UsuarioComumDAO();
+        this.redisDAO = new RankingRedisDAO();
     }
 
     /**
@@ -36,9 +39,15 @@ public class RankingAllTimeService {
      * com menos (empate: o cadastro mais antigo vem primeiro).
      */
     public List<RankingAllTimeResponseDTO> listar() {
-        // TODO(Redis): trocar por ZREVRANGE ranking:all-time 0 -1 WITHSCORES.
-        // Esta consulta agrupada passa a servir só para reconstruir o sorted set.
-        Map<Integer, Integer> totais = usuarioMissaoDAO.contarConcluidasPorUsuario();
+        // Redis (ZREVRANGE WITHSCORES); se estiver fora do ar ou vazio, usa o Oracle e popula o Redis.
+        Map<Integer, Integer> totais = redisDAO.listar();
+        if (totais == null || totais.isEmpty()) {
+            totais = usuarioMissaoDAO.contarConcluidasPorUsuario();
+            if (totais.isEmpty() == false) {
+                redisDAO.reconstruir(totais);
+            }
+        }
+        final Map<Integer, Integer> pontos = totais;
 
         List<UsuarioComum> usuarios = usuarioDAO.listar();
         List<RankingAllTimeResponseDTO> ranking = new ArrayList<>();
@@ -47,7 +56,7 @@ public class RankingAllTimeService {
         }
 
         usuarios.sort(Comparator
-                .comparingInt((UsuarioComum u) -> totais.getOrDefault(u.getIdUsuario(), 0)).reversed()
+                .comparingInt((UsuarioComum u) -> pontos.getOrDefault(u.getIdUsuario(), 0)).reversed()
                 .thenComparingInt(UsuarioComum::getIdUsuario));
 
         int posicao = 1;
@@ -55,15 +64,29 @@ public class RankingAllTimeService {
             ranking.add(new RankingAllTimeResponseDTO(
                     posicao++,
                     UsuarioResumoMapper.toDto(usuario),
-                    totais.getOrDefault(usuario.getIdUsuario(), 0)));
+                    pontos.getOrDefault(usuario.getIdUsuario(), 0)));
         }
         return ranking;
     }
 
+    /** Reconstrói o Sorted Set a partir do Oracle (usado ao atualizar os rankings). */
+    public void reconstruir() {
+        redisDAO.reconstruir(usuarioMissaoDAO.contarConcluidasPorUsuario());
+    }
+
     /**
-     * Chamado uma vez cada vez que um usuário conclui uma missão.
+     * Chamado uma vez cada vez que um usuário conclui uma missão (conclusão já validada e
+     * gravada): soma no ranking geral (all time) e atualiza o ranking individual do mês.
+     * Os rankings são derivados do que já está no banco, então uma falha aqui não desfaz a
+     * conclusão: é só registrada, e a próxima atualização dos rankings corrige tudo.
      */
     public void registrarMissaoConcluida(int idUsuario) {
-        // TODO(Redis): ZINCRBY ranking:all-time 1 {idUsuario}
+        redisDAO.incrementar(idUsuario); // ZINCRBY ranking:all-time 1 {idUsuario}
+
+        try {
+            new RankingService().atualizarRankingMensalIndividual();
+        } catch (RuntimeException e) {
+            System.err.println("Não foi possível atualizar o ranking do mês: " + e.getMessage());
+        }
     }
 }

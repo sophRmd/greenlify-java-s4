@@ -1,6 +1,6 @@
 package br.com.fiap.greenlify.models;
 
-import br.com.fiap.greenlify.dao.CarteiraDAO;
+import br.com.fiap.greenlify.dao.ContaLuzDAO;
 import br.com.fiap.greenlify.dao.RecompensaDAO;
 import br.com.fiap.greenlify.dao.ResgateDAO;
 
@@ -23,28 +23,47 @@ public class PosicaoRanking {
     /** Missões concluídas pelo usuário dentro do período do ranking (calculado, não é gravado). */
     private int missoesRealizadas;
 
+    /** Resultado da tentativa de conceder a recompensa de uma posição. */
+    public enum Resultado {
+        /** Prêmio concedido agora. */
+        CONCEDIDA,
+        /** O usuário já tinha recebido o prêmio deste ranking (nada foi feito). */
+        JA_CONCEDIDA,
+        /** Não foi possível conceder (ex.: 1º lugar sem conta de luz cadastrada, falha no banco). */
+        NAO_CONCEDIDA
+    }
+
     /**
      * Concede ao usuário informado a recompensa correspondente à colocação
-     * desta posição no ranking, adicionando o bônus de pontos à carteira do
-     * usuário e registrando o resgate.
+     * desta posição no ranking e registra o resgate (com a data final do
+     * ranking, o que identifica usuário + ranking), no máximo uma vez por ranking.
      * <p>
-     * Funciona tanto para uma posição do ranking de usuários quanto para
-     * uma posição do ranking de grupos — em ambos os casos, quem recebe os
-     * pontos é o usuário informado em {@code usuarioResgatador}, já que uma
-     * posição de ranking de grupo não está associada a um único usuário.
-     * <p>
-     * A recompensa concedida varia de acordo com a posição: 1º, 2º e 3º
-     * lugares recebem recompensas exclusivas, do 4º ao 10º lugar recebem uma
-     * recompensa intermediária, do 11º ao 20º lugar recebem uma recompensa
-     * menor, e as demais posições recebem a recompensa padrão.
+     * Regras de premiação:
+     * <ul>
+     *   <li>1º lugar: pagamento INTEGRAL da conta de luz que o usuário cadastrou
+     *       (sem crédito nem débito na carteira);</li>
+     *   <li>2º e 3º lugares: bônus percentual (da recompensa 2 e 3) sobre o saldo
+     *       de pontos da carteira;</li>
+     *   <li>4º ao 10º: recompensa 4; 11º ao 20º: recompensa 5; demais: recompensa 6,
+     *       todas como bônus percentual sobre o saldo.</li>
+     * </ul>
+     * A concessão e o registro do resgate acontecem na mesma transação do banco.
      *
      * @param usuarioResgatador usuário que deve receber a recompensa
+     * @return o que aconteceu: concedida, já concedida antes ou não concedida
      */
-    public void concederRecompensa(UsuarioComum usuarioResgatador) {
+    public Resultado concederRecompensa(UsuarioComum usuarioResgatador) {
 
-        if (usuarioResgatador == null) {
+        if (usuarioResgatador == null || ranking == null || ranking.getDataFim() == null) {
             System.out.println("Erro ao conceder recompensa.");
-            return;
+            return Resultado.NAO_CONCEDIDA;
+        }
+
+        ResgateDAO resgateDAO = new ResgateDAO();
+        // O prêmio do ranking é gravado com a data final do período: usuário + data = usuário + ranking.
+        LocalDate dataConcessao = ranking.getDataFim();
+        if (resgateDAO.existePorUsuarioEData(usuarioResgatador.getIdUsuario(), dataConcessao)) {
+            return Resultado.JA_CONCEDIDA;
         }
 
         int idRecompensa = 6;
@@ -60,43 +79,38 @@ public class PosicaoRanking {
             idRecompensa = 5;
         }
 
-        RecompensaDAO recompensaDAO = new RecompensaDAO();
-        Recompensa recompensa = recompensaDAO.buscarPorId(idRecompensa);
-
-        CarteiraDAO carteiraDAO = new CarteiraDAO();
-        Carteira carteira = carteiraDAO.buscarPorIdUsuario(usuarioResgatador.getIdUsuario());
-
+        Recompensa recompensa = new RecompensaDAO().buscarPorId(idRecompensa);
         if (recompensa == null) {
             System.out.println("Recompensa não encontrada.");
-            return;
+            return Resultado.NAO_CONCEDIDA;
         }
-
-        if (carteira == null) {
-            System.out.println("Carteira não encontrada.");
-            return;
-        }
-
-        int pontosAtuais = carteira.getQtdPontos();
-        int percentual = recompensa.getBonusPercentual();
-        int pontosAdicionais = (pontosAtuais * percentual) / 100;
-
-        int novoSaldo = pontosAtuais + pontosAdicionais;
-        carteira.setQtdPontos(novoSaldo);
-        carteira.setValorReal(novoSaldo * 0.009052);
-
-        carteiraDAO.atualizarSaldoPontos(carteira);
 
         Resgate resgate = new Resgate();
-        resgate.setDataConcessao(LocalDate.now());
+        resgate.setDataConcessao(dataConcessao);
         resgate.setUsuario(usuarioResgatador);
         resgate.setRecompensa(recompensa);
 
-        ResgateDAO resgateDAO = new ResgateDAO();
-        resgateDAO.cadastrar(resgate);
+        Resultado resultado;
+        if (this.posicao == 1) {
+            ContaLuz conta = new ContaLuzDAO().buscarPendenteDoUsuario(usuarioResgatador.getIdUsuario());
+            if (conta == null) {
+                System.out.println("1º lugar sem conta de luz pendente: prêmio não concedido.");
+                return Resultado.NAO_CONCEDIDA;
+            }
+            PagamentoConta pagamento = new PagamentoConta();
+            pagamento.setDataPagamento(LocalDate.now());
+            pagamento.setValorPago(conta.getValorConta());
+            pagamento.setUsuario(usuarioResgatador);
+            pagamento.setContaLuz(conta);
+            resultado = resgateDAO.concederPagamentoConta(resgate, pagamento);
+        } else {
+            resultado = resgateDAO.concederBonus(resgate, recompensa.getBonusPercentual());
+        }
 
-        System.out.println("Recompensa concedida: " + recompensa.getDescricao());
-        System.out.println("Pontos adicionados: " + pontosAdicionais);
-        System.out.println("Novo saldo: " + novoSaldo);
+        if (resultado == Resultado.CONCEDIDA) {
+            System.out.println("Recompensa concedida: " + recompensa.getDescricao());
+        }
+        return resultado;
     }
 
     public int getPosicao() {

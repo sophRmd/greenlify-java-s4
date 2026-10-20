@@ -51,10 +51,11 @@ public class UsuarioMissaoService {
                 .toList();
     }
 
-    public void cadastrar(UsuarioMissaoRequestDTO dto) {
-        validar(dto);
+    /** Inicia a missão para o usuário autenticado: tentativas e progresso sempre começam em 0. */
+    public void cadastrar(UsuarioMissaoRequestDTO dto, int idUsuario) {
+        validar(dto, idUsuario);
 
-        boolean jaTemMissao = usuarioMissaoDAO.listarPorUsuario(dto.idUsuario())
+        boolean jaTemMissao = usuarioMissaoDAO.listarPorUsuario(idUsuario)
                 .stream()
                 .anyMatch(um -> um.getMissao().getIdMissao() == dto.idMissao());
         if (jaTemMissao) {
@@ -62,9 +63,8 @@ public class UsuarioMissaoService {
             throw new IllegalArgumentException("O usuário já possui essa missão.");
         }
 
-        UsuarioMissao novo = UsuarioMissaoMapper.dtoToEntity(dto);
+        UsuarioMissao novo = UsuarioMissaoMapper.dtoToEntity(dto, idUsuario);
         usuarioMissaoDAO.cadastrar(novo);
-        registrarConclusaoMissaoMensal(dto, new UsuarioMissao(), novo.getIdUsuarioMissao()); // progresso anterior = 0
     }
 
     public void excluir(int id) {
@@ -75,54 +75,47 @@ public class UsuarioMissaoService {
         usuarioMissaoDAO.excluir(id);
     }
 
-    public void alterar(UsuarioMissaoRequestDTO dto, int id) {
+    /**
+     * Registra um passo de progresso em uma missão mensal do usuário autenticado. O servidor é
+     * quem avança o progresso (um passo por chamada, só dentro do período da missão) e quem
+     * decide a conclusão; só então atualiza o ranking geral e o streak.
+     *
+     * @throws SecurityException        se o registro pertence a outro usuário
+     * @throws IllegalArgumentException se o registro não existe, a missão está fora do período ou já foi concluída
+     */
+    public UsuarioMissaoResponseDTO registrarProgresso(int id, int idUsuario) {
         UsuarioMissao existente = usuarioMissaoDAO.buscarPorId(id);
         if (existente == null) {
             throw new IllegalArgumentException("Registro de usuário e missão não encontrado");
         }
-        validar(dto);
+        if (existente.getUsuario().getIdUsuario() != idUsuario) {
+            throw new SecurityException("Você só pode registrar progresso nas suas próprias missões.");
+        }
 
-        UsuarioMissao usuarioMissao = UsuarioMissaoMapper.dtoToEntity(dto);
-        usuarioMissao.setIdUsuarioMissao(id);
-        usuarioMissaoDAO.alterar(usuarioMissao);
-        registrarConclusaoMissaoMensal(dto, existente, id);
-    }
-
-    /**
-     * Quando o progresso de uma missão mensal atinge a meta, grava a data de
-     * conclusão (rankings) e avisa o ranking all time; se isso aconteceu dentro
-     * do período da missão, registra também a atividade do mês no streak.
-     */
-    private void registrarConclusaoMissaoMensal(UsuarioMissaoRequestDTO dto, UsuarioMissao anterior,
-                                                int idUsuarioMissao) {
-        MissaoMensal mensal = missaoMensalDAO.buscarPorId(dto.idMissao());
-        if (mensal == null) {
-            return;
+        int idMissao = existente.getMissao().getIdMissao();
+        MissaoMensal mensal = missaoMensalDAO.buscarPorId(idMissao);
+        // O DAO nunca devolve null: se a missão não é mensal, vem um objeto padrão (id diferente).
+        if (mensal == null || mensal.getIdMissao() != idMissao) {
+            throw new IllegalArgumentException("A missão informada não é uma missão mensal.");
         }
         LocalDate hoje = LocalDate.now();
-        boolean noPeriodo = mensal.getDataInicio() != null && mensal.getDataFim() != null
-                && !hoje.isBefore(mensal.getDataInicio()) && !hoje.isAfter(mensal.getDataFim());
-        boolean acabouDeConcluir = anterior.getProgressoAtual() < mensal.getMeta()
-                && dto.progressoAtual() >= mensal.getMeta();
-        if (acabouDeConcluir) {
-            usuarioMissaoDAO.registrarConclusao(idUsuarioMissao, hoje);
-            rankingAllTimeService.registrarMissaoConcluida(dto.idUsuario());
+        if (mensal.getDataInicio() == null || mensal.getDataFim() == null
+                || hoje.isBefore(mensal.getDataInicio()) || hoje.isAfter(mensal.getDataFim())) {
+            throw new IllegalArgumentException("A missão está fora do período de vigência.");
         }
-        if (noPeriodo && acabouDeConcluir) {
-            streakService.registrarAtividade(dto.idUsuario(), hoje);
+
+        UsuarioMissaoDAO.Avanco avanco = usuarioMissaoDAO.avancarProgressoMensal(idUsuario, idMissao,
+                mensal.getMeta(), hoje);
+        if (avanco.concluiu()) {
+            // Conclusão válida e já gravada: ranking geral (all time e mês) e streak do mês.
+            rankingAllTimeService.registrarMissaoConcluida(idUsuario);
+            streakService.registrarAtividade(idUsuario, hoje);
         }
+        return buscarPorId(id);
     }
 
-    private void validar(UsuarioMissaoRequestDTO dto) {
-        if (dto.tentativas() < 0) {
-            System.out.println("ERRO: O número de tentativas não pode ser negativo.");
-            throw new IllegalArgumentException("O número de tentativas não pode ser negativo.");
-        }
-        if (dto.progressoAtual() < 0) {
-            System.out.println("ERRO: O progresso atual não pode ser negativo.");
-            throw new IllegalArgumentException("O progresso atual não pode ser negativo.");
-        }
-        if (dto.idUsuario() <= 0) {
+    private void validar(UsuarioMissaoRequestDTO dto, int idUsuario) {
+        if (idUsuario <= 0) {
             System.out.println("ERRO: O usuário é obrigatório.");
             throw new IllegalArgumentException("O usuário é obrigatório.");
         }
@@ -130,7 +123,7 @@ public class UsuarioMissaoService {
             System.out.println("ERRO: A missão é obrigatória.");
             throw new IllegalArgumentException("A missão é obrigatória.");
         }
-        if (usuarioDAO.buscarPorId(dto.idUsuario()) == null) {
+        if (usuarioDAO.buscarPorId(idUsuario) == null) {
             System.out.println("ERRO: Usuário informado não existe.");
             throw new IllegalArgumentException("O usuário informado não existe.");
         }

@@ -7,6 +7,21 @@ public class UsuarioMissao {
     private Usuario usuario;
     private Missao missao;
 
+    /**
+     * Avança um passo no progresso (e conta uma tentativa), sem passar da meta.
+     * Quem decide o avanço é o servidor, nunca o cliente.
+     *
+     * @return {@code true} se este passo fez o progresso atingir a meta
+     */
+    public boolean avancarProgresso(int meta) {
+        if (progressoAtual >= meta) {
+            return false;
+        }
+        progressoAtual++;
+        tentativas++;
+        return progressoAtual >= meta;
+    }
+
     public int getIdUsuarioMissao() {
         return idUsuarioMissao;
     }

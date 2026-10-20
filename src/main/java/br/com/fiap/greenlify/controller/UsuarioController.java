@@ -42,7 +42,11 @@ public class UsuarioController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UsuarioCadastroResponseDTO> buscarPorId(@PathVariable int id) {
+    public ResponseEntity<UsuarioCadastroResponseDTO> buscarPorId(
+            @PathVariable int id,
+            @RequestHeader(value = "X-Usuario-Email", required = false) String email,
+            @RequestHeader(value = "X-Usuario-Senha", required = false) String senha) {
+        service.exigirDono(email, senha, id);
         try {
             return ResponseEntity.ok(service.buscarPorId(id));
         } catch (IllegalArgumentException e) {
@@ -51,13 +55,19 @@ public class UsuarioController {
     }
 
     @GetMapping
-    public ResponseEntity<List<UsuarioCadastroResponseDTO>> listar() {
+    public ResponseEntity<List<UsuarioCadastroResponseDTO>> listar(
+            @RequestHeader(value = "X-Admin-Email", required = false) String adminEmail,
+            @RequestHeader(value = "X-Admin-Senha", required = false) String adminSenha) {
+        service.exigirAdministrador(adminEmail, adminSenha);
         return ResponseEntity.ok(service.listar());
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<String> alterar(@PathVariable int id,
-                                          @RequestBody UsuarioCadastroRequestDTO objeto) {
+                                          @RequestBody UsuarioCadastroRequestDTO objeto,
+                                          @RequestHeader(value = "X-Usuario-Email", required = false) String email,
+                                          @RequestHeader(value = "X-Usuario-Senha", required = false) String senha) {
+        service.exigirDono(email, senha, id);
         try {
             service.alterar(objeto, id);
             return ResponseEntity.ok().build();
@@ -71,7 +81,11 @@ public class UsuarioController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluir(@PathVariable int id) {
+    public ResponseEntity<Void> excluir(
+            @PathVariable int id,
+            @RequestHeader(value = "X-Usuario-Email", required = false) String email,
+            @RequestHeader(value = "X-Usuario-Senha", required = false) String senha) {
+        service.exigirDono(email, senha, id);
         try {
             service.excluir(id);
             return ResponseEntity.ok().build();

@@ -11,4 +11,15 @@ services:
       SPRING_DATASOURCE_USERNAME: "${ORACLE_USER}"
       SPRING_DATASOURCE_PASSWORD: "${ORACLE_PASSWORD}"
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: "oracle.jdbc.OracleDriver"
+
+      # Redis do ranking all time (se cair, o ranking usa o Oracle)
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: greenlify-redis
     restart: unless-stopped

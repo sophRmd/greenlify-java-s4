@@ -267,4 +267,27 @@ public class FingerprintFrameDAO {
         }
         return frames;
     }
+
+    /**
+     * Cadastra um frame usando uma conexão já aberta (para participar da transação
+     * de quem chamou) e preenche o id gerado no próprio objeto. Não faz commit nem
+     * fecha a conexão; erros de SQL sobem para o chamador decidir o rollback.
+     */
+    public void cadastrar(Connection conexao, FingerprintFrame frame) throws SQLException {
+        String sql = "INSERT INTO Fingerprint_Frame (nr_frame, nr_tempo_segundo, "
+                + "ds_phash, ds_embedding, id_fingerprint) VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = conexao.prepareStatement(sql, new String[]{"ID_FINGERPRINT_FRAME"})) {
+            ps.setInt(1, frame.getNumeroFrame());
+            ps.setInt(2, frame.getTempoSegundo());
+            ps.setString(3, frame.getpHash());
+            ps.setString(4, frame.getEmbedding());
+            ps.setInt(5, frame.getFingerprint().getIdFingerprint());
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    frame.setIdFingerprintFrame(rs.getInt(1));
+                }
+            }
+        }
+    }
 }

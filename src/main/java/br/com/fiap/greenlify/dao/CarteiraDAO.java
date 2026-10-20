@@ -261,4 +261,58 @@ public class CarteiraDAO {
             }
         }
     }
+
+    /** Taxa de conversão pontos -> reais, a mesma de Carteira. */
+    private static final double REAIS_POR_PONTO = 0.009052;
+
+    /**
+     * Soma pontos ao saldo da carteira do usuário em uma única instrução SQL
+     * (o saldo novo é calculado pelo próprio banco a partir do saldo atual), então
+     * duas operações simultâneas nunca se sobrescrevem. Se o usuário ainda não tem
+     * carteira, ela é criada já com os pontos (o id da carteira é o id do usuário,
+     * como em {@link #cadastrar(Carteira)}).
+     * <p>
+     * Usa a conexão recebida, para participar da transação de quem chamou: não faz
+     * commit nem fecha a conexão, e erros de SQL sobem para o chamador decidir o rollback.
+     *
+     * @param conexao   conexão (e transação) já aberta
+     * @param idUsuario usuário que recebe os pontos
+     * @param pontos    pontos a somar
+     */
+    public void creditarPontos(Connection conexao, int idUsuario, int pontos) throws SQLException {
+        String sql = "UPDATE Carteira SET nr_saldo_pontos = nr_saldo_pontos + ?, "
+                + "vl_pontos_convertidos = (nr_saldo_pontos + ?) * ? WHERE id_usuario = ?";
+        int atualizadas;
+        try (PreparedStatement ps = conexao.prepareStatement(sql)) {
+            ps.setInt(1, pontos);
+            ps.setInt(2, pontos);
+            ps.setDouble(3, REAIS_POR_PONTO);
+            ps.setInt(4, idUsuario);
+            atualizadas = ps.executeUpdate();
+        }
+
+        if (atualizadas == 0) {
+            String insert = "INSERT INTO Carteira (id_carteira, nr_saldo_pontos, vl_pontos_convertidos, id_usuario) "
+                    + "VALUES (?, ?, ?, ?)";
+            try (PreparedStatement ps = conexao.prepareStatement(insert)) {
+                ps.setInt(1, idUsuario);
+                ps.setInt(2, pontos);
+                ps.setDouble(3, pontos * REAIS_POR_PONTO);
+                ps.setInt(4, idUsuario);
+                ps.executeUpdate();
+            }
+        }
+    }
+
+    /**
+     * Mesma operação de {@link #creditarPontos(Connection, int, int)}, com conexão
+     * própria (uma única instrução, confirmada na hora).
+     */
+    public void creditarPontos(int idUsuario, int pontos) {
+        try (Connection con = ConnectionFactory.obterConexao()) {
+            creditarPontos(con, idUsuario, pontos);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 }

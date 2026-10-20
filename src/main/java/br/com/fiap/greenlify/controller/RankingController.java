@@ -30,15 +30,56 @@ public class RankingController {
         }
     }
 
-    /** Recalcula os rankings do mês */
+    /** Recalcula os rankings do mês e o all time. Só administrador: cabeçalhos X-Admin-Email e X-Admin-Senha. */
     @PostMapping("/atualizar")
-    public ResponseEntity<String> atualizar() {
+    public ResponseEntity<String> atualizar(
+            @RequestHeader(value = "X-Admin-Email", required = false) String email,
+            @RequestHeader(value = "X-Admin-Senha", required = false) String senha) {
+        try {
+            service.exigirAdministrador(email, senha);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        }
+
         try {
             service.atualizarRankings();
             return ResponseEntity.ok("Rankings atualizados com sucesso!");
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao atualizar os rankings: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Fecha o ranking individual (já encerrado) e concede as recompensas. Fechamento manual,
+     * só administrador: cabeçalhos X-Admin-Email e X-Admin-Senha. Pode ser repetido sem duplicar prêmios.
+     */
+    @PostMapping("/{id}/fechar")
+    public ResponseEntity<String> fechar(
+            @PathVariable int id,
+            @RequestHeader(value = "X-Admin-Email", required = false) String email,
+            @RequestHeader(value = "X-Admin-Senha", required = false) String senha) {
+        try {
+            service.exigirAdministrador(email, senha);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        }
+
+        try {
+            RankingService.ResultadoFechamento r = service.fecharRanking(id);
+            return ResponseEntity.ok("Ranking fechado! Recompensas concedidas: " + r.concedidas()
+                    + ", já concedidas antes: " + r.jaConcedidas()
+                    + ", não concedidas: " + r.naoConcedidas() + ".");
+        } catch (IllegalArgumentException e) {
+            if (e.getMessage() != null && e.getMessage().contains("não encontrado")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Erro ao fechar o ranking: " + e.getMessage());
         }
     }
 

@@ -1,6 +1,7 @@
 package br.com.fiap.greenlify.service;
 
 import br.com.fiap.greenlify.util.ValidadorEntrada;
+import br.com.fiap.greenlify.dao.AdminDAO;
 import br.com.fiap.greenlify.dao.GrupoDAO;
 import br.com.fiap.greenlify.dao.UsuarioComumDAO;
 import br.com.fiap.greenlify.dto.UsuarioCadastroRequestDTO;
@@ -8,7 +9,9 @@ import br.com.fiap.greenlify.dto.UsuarioCadastroResponseDTO;
 import br.com.fiap.greenlify.enums.StatusContaEnum;
 import br.com.fiap.greenlify.mapper.UsuarioCadastroMapper;
 import br.com.fiap.greenlify.models.UsuarioComum;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -64,6 +67,7 @@ public class UsuarioService {
         UsuarioComum usuario = UsuarioCadastroMapper.dtoToEntity(dto);
         usuario.setIdUsuario(id);
         usuario.setNivelAcesso(0);
+        usuario.setStatusConta(existente.getStatusConta()); // o status da conta não é alterado por aqui
         usuarioDAO.alterar(usuario);
     }
 
@@ -81,6 +85,51 @@ public class UsuarioService {
             throw new IllegalArgumentException("Conta não está ativa.");
         }
         return UsuarioCadastroMapper.toDto(usuario);
+    }
+
+    /**
+     * Identifica quem fez a requisição pelas credenciais enviadas nos cabeçalhos
+     * (mesmo padrão já usado pelo administrador no RankingController). Nada é guardado no
+     * servidor: as credenciais são conferidas no banco a cada chamada.
+     *
+     * @return o id do usuário comum autenticado
+     * @throws ResponseStatusException 401 se faltarem credenciais, forem inválidas ou a conta não estiver ativa
+     */
+    public int autenticar(String email, String senha) {
+        if (email == null || email.isBlank() || senha == null || senha.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Autenticação necessária: envie os cabeçalhos X-Usuario-Email e X-Usuario-Senha.");
+        }
+        UsuarioComum usuario = usuarioDAO.buscarPorEmailESenha(email, senha);
+        if (usuario == null || usuario.getStatusConta() != StatusContaEnum.ATIVA) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciais inválidas.");
+        }
+        return usuario.getIdUsuario();
+    }
+
+    /** Exige login e que o usuário autenticado seja o dono ({@code idUsuario}); senão 401 ou 403. */
+    public void exigirDono(String email, String senha, int idUsuario) {
+        if (autenticar(email, senha) != idUsuario) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Você só pode executar esta ação em seu próprio nome.");
+        }
+    }
+
+    /**
+     * Exige credenciais de administrador (cabeçalhos X-Admin-Email e X-Admin-Senha, como no
+     * RankingController); 401 se inválidas, 403 se forem de um usuário comum.
+     */
+    public void exigirAdministrador(String email, String senha) {
+        if (email == null || email.isBlank() || senha == null || senha.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciais de administrador não informadas.");
+        }
+        if (new AdminDAO().buscarPorEmailESenha(email, senha) != null) {
+            return;
+        }
+        if (usuarioDAO.buscarPorEmailESenha(email, senha) != null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso restrito ao administrador.");
+        }
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciais inválidas.");
     }
 
     private void validar(UsuarioCadastroRequestDTO dto) {

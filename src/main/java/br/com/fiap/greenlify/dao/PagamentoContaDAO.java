@@ -64,6 +64,28 @@ public class PagamentoContaDAO {
     }
 
     /**
+     * Cadastra um pagamento usando uma conexão já aberta (para participar de uma
+     * transação de quem chamou). Não faz commit nem fecha a conexão; erros de SQL
+     * sobem para o chamador decidir o rollback.
+     */
+    public void cadastrar(Connection conexao, PagamentoConta pagamento) throws SQLException {
+        String sql = "INSERT INTO Pagamento_Conta (dt_pagamento, vl_pago, id_usuario, id_conta_luz) " +
+                "VALUES (?, ?, ?, ?)";
+        try (PreparedStatement ps = conexao.prepareStatement(sql, new String[]{"ID_PAGAMENTO"})) {
+            ps.setDate(1, Date.valueOf(pagamento.getDataPagamento()));
+            ps.setDouble(2, pagamento.getValorPago());
+            ps.setInt(3, pagamento.getUsuario().getIdUsuario());
+            ps.setInt(4, pagamento.getContaLuz().getIdContaLuz());
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    pagamento.setIdPagamento(rs.getInt(1));
+                }
+            }
+        }
+    }
+
+    /**
      * Atualiza os dados de um pagamento já existente.
      *
      * @param pagamento dados atualizados do pagamento (o id é usado como referência)

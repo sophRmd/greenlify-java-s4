@@ -27,15 +27,14 @@ public class Ranking {
     /**
      * Calcula o ranking de usuários do período (de {@code dataInicio} a
      * {@code dataFim}): ordena do maior para o menor número de missões
-     * concluídas dentro do período e, em caso de empate, pelo saldo de pontos
-     * da carteira, atribuindo a posição correspondente.
+     * concluídas dentro do período e, em caso de empate, pelo cadastro mais
+     * antigo (menor id de usuário); a carteira não entra na classificação, atribuindo a posição correspondente.
      *
      * @return lista de posições de ranking dos usuários, já ordenada e
      *         numerada, ou lista vazia caso não existam usuários cadastrados
      */
     public List<PosicaoRanking> calcularRankingUsuarios() {
         UsuarioComumDAO usuarioDAO = new UsuarioComumDAO();
-        CarteiraDAO carteiraDAO = new CarteiraDAO();
 
         List<UsuarioComum> todosUsuarios = usuarioDAO.listar();
         List<PosicaoRanking> posicoes = new ArrayList<>();
@@ -51,17 +50,11 @@ public class Ranking {
         }
 
         for (UsuarioComum usuario : todosUsuarios) {
-            Carteira carteira = carteiraDAO.buscarPorIdUsuario(usuario.getIdUsuario());
-
-            int pontos = 0;
-            if (carteira != null) {
-                pontos = carteira.getQtdPontos();
-            }
-
             PosicaoRanking pr = new PosicaoRanking();
             pr.setUsuario(usuario);
-            pr.setPontuacao(pontos);
-            pr.setMissoesRealizadas(missoesNoPeriodo.getOrDefault(usuario.getIdUsuario(), 0));
+            int missoes = missoesNoPeriodo.getOrDefault(usuario.getIdUsuario(), 0);
+            pr.setPontuacao(missoes);
+            pr.setMissoesRealizadas(missoes);
             pr.setRanking(this);
 
             posicoes.add(pr);
@@ -74,7 +67,7 @@ public class Ranking {
                 if (porMissoes != 0) {
                     return porMissoes;
                 }
-                return Integer.compare(p2.getPontuacao(), p1.getPontuacao());
+                return Integer.compare(p1.getUsuario().getIdUsuario(), p2.getUsuario().getIdUsuario());
             }
         });
 
@@ -107,7 +100,7 @@ public class Ranking {
             for (PosicaoRanking pr : posicoesUsuarios) {
                 System.out.println("\n" + pr.getPosicao() + "° lugar");
                 System.out.println("Nome: " + pr.getUsuario().getNome());
-                System.out.println("Pontuação: " + pr.getPontuacao());
+                System.out.println("Missões concluídas: " + pr.getPontuacao());
             }
         } else {
             System.out.println("Nenhum usuário encontrado no ranking.");

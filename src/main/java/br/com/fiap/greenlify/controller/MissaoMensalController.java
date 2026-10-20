@@ -3,6 +3,7 @@ package br.com.fiap.greenlify.controller;
 import br.com.fiap.greenlify.dto.MissaoMensalCompletaRequestDTO;
 import br.com.fiap.greenlify.dto.MissaoMensalCompletaResponseDTO;
 import br.com.fiap.greenlify.service.MissaoMensalService;
+import br.com.fiap.greenlify.service.UsuarioService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,7 @@ import java.util.List;
 public class MissaoMensalController {
 
     private MissaoMensalService service = new MissaoMensalService();
+    private final UsuarioService usuarioService = new UsuarioService();
 
     @GetMapping
     public ResponseEntity<List<MissaoMensalCompletaResponseDTO>> listar() {
@@ -31,7 +33,10 @@ public class MissaoMensalController {
     }
 
     @PostMapping
-    public ResponseEntity<String> cadastrar(@RequestBody MissaoMensalCompletaRequestDTO dto) {
+    public ResponseEntity<String> cadastrar(@RequestBody MissaoMensalCompletaRequestDTO dto,
+                                            @RequestHeader(value = "X-Admin-Email", required = false) String adminEmail,
+                                            @RequestHeader(value = "X-Admin-Senha", required = false) String adminSenha) {
+        usuarioService.exigirAdministrador(adminEmail, adminSenha);
         try {
             service.cadastrar(dto);
             return ResponseEntity.status(HttpStatus.CREATED).body("Missão mensal cadastrada com sucesso!");
@@ -42,7 +47,10 @@ public class MissaoMensalController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Void> atualizar(@PathVariable int id,
-                                          @RequestBody MissaoMensalCompletaRequestDTO dto) {
+                                          @RequestBody MissaoMensalCompletaRequestDTO dto,
+                                          @RequestHeader(value = "X-Admin-Email", required = false) String adminEmail,
+                                          @RequestHeader(value = "X-Admin-Senha", required = false) String adminSenha) {
+        usuarioService.exigirAdministrador(adminEmail, adminSenha);
         try {
             service.atualizar(id, dto);
             return ResponseEntity.ok().build();
@@ -52,7 +60,10 @@ public class MissaoMensalController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluir(@PathVariable int id) {
+    public ResponseEntity<Void> excluir(@PathVariable int id,
+                                        @RequestHeader(value = "X-Admin-Email", required = false) String adminEmail,
+                                        @RequestHeader(value = "X-Admin-Senha", required = false) String adminSenha) {
+        usuarioService.exigirAdministrador(adminEmail, adminSenha);
         try {
             service.excluir(id);
             return ResponseEntity.ok().build();

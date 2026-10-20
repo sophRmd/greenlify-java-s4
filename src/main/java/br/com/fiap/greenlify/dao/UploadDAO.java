@@ -261,4 +261,163 @@ public class UploadDAO {
         }
         return totais;
     }
+
+    // ------------------------------------------------------------------
+    // Ciclo mensal das missões contínuas e gravação transacional do envio
+    // ------------------------------------------------------------------
+
+    /** Primeiro dia do ciclo (mês) a que a data pertence: o progresso das contínuas reinicia nele. */
+    public static LocalDate inicioDoCiclo(LocalDate data) {
+        return data.withDayOfMonth(1);
+    }
+
+    /**
+     * Progresso do usuário na missão no ciclo (mês) da data informada: quantos uploads
+     * APROVADOS ele tem na missão entre o primeiro dia do mês e o primeiro dia do mês seguinte.
+     */
+    public int contarAprovadosNoCiclo(int idUsuario, int idMissao, LocalDate dia) {
+        try (Connection con = ConnectionFactory.obterConexao()) {
+            return contarAprovadosNoCiclo(con, idUsuario, idMissao, dia);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    /** Mesma contagem de {@link #contarAprovadosNoCiclo(int, int, LocalDate)}, na conexão (transação) recebida. */
+    public int contarAprovadosNoCiclo(Connection con, int idUsuario, int idMissao, LocalDate dia)
+            throws SQLException {
+        LocalDate inicio = inicioDoCiclo(dia);
+        String sql = "SELECT COUNT(*) FROM Upload WHERE id_usuario = ? AND id_missao = ? "
+                + "AND ds_status = ? AND dt_envio >= ? AND dt_envio < ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idUsuario);
+            ps.setInt(2, idMissao);
+            ps.setString(3, StatusUploadEnum.APROVADO.name());
+            ps.setDate(4, Date.valueOf(inicio));
+            ps.setDate(5, Date.valueOf(inicio.plusMonths(1)));
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    /**
+     * Grava o envio inteiro em UMA transação, com uma única conexão: upload, fingerprint,
+     * frames, progresso do usuário na missão e, se o envio conclui a missão, o crédito dos
+     * pontos na carteira e a data de conclusão. Se qualquer etapa falhar, nada é gravado.
+     * <p>
+     * Primeiro trava a linha do usuário (FOR UPDATE) e só então confere o limite do mês:
+     * dois envios simultâneos do mesmo usuário ficam em fila, e o segundo enxerga o
+     * progresso do primeiro, então os pontos nunca são creditados em duplicidade.
+     * O saldo é somado pelo próprio SQL ({@link CarteiraDAO#creditarPontos}).
+     * <p>
+     * O progresso é do ciclo mensal: uploads aprovados no mês do envio (incluindo este).
+     *
+     * @param upload      upload já analisado (status, datas e dono preenchidos)
+     * @param fingerprint fingerprint do vídeo, ou {@code null} se o arquivo foi recusado
+     * @param frames      frames da fingerprint (vazio se não houver fingerprint)
+     * @param missao      missão contínua do envio, com limite e pontuação carregados
+     * @return {@code true} se este envio concluiu a missão no mês (pontos creditados)
+     * @throws IllegalArgumentException se o usuário não existe ou já atingiu o limite do mês
+     * @throws IllegalStateException    se o banco falhar (nada foi gravado)
+     */
+    public boolean registrarEnvio(Upload upload, Fingerprint fingerprint, List<FingerprintFrame> frames,
+                                  MissaoContinua missao) {
+        int idUsuario = upload.getUsuario().getIdUsuario();
+        int idMissao = missao.getIdMissao();
+        LocalDate dia = upload.getDataEnvio();
+        boolean aprovado = upload.getStatus() == StatusUploadEnum.APROVADO;
+        UsuarioMissaoDAO usuarioMissaoDAO = new UsuarioMissaoDAO();
+
+        try (Connection con = ConnectionFactory.obterConexao()) {
+            boolean confirmado = false;
+            try {
+                con.setAutoCommit(false);
+
+                if (!usuarioMissaoDAO.travarUsuario(con, idUsuario)) {
+                    throw new IllegalArgumentException("O usuário informado não existe.");
+                }
+
+                int aprovadosNoCiclo = contarAprovadosNoCiclo(con, idUsuario, idMissao, dia);
+                if (aprovadosNoCiclo >= missao.getLimiteRealizacoes()) {
+                    throw new IllegalArgumentException("O usuário já concluiu essa missão neste mês.");
+                }
+
+                inserir(con, upload);
+
+                if (fingerprint != null) {
+                    fingerprint.setUpload(upload);
+                    new FingerprintDAO().cadastrar(con, fingerprint);
+                    FingerprintFrameDAO frameDAO = new FingerprintFrameDAO();
+                    for (FingerprintFrame frame : frames) {
+                        frame.setFingerprint(fingerprint);
+                        frameDAO.cadastrar(con, frame);
+                    }
+                }
+
+                int progresso = aprovadosNoCiclo + (aprovado ? 1 : 0);
+                UsuarioMissao andamento = usuarioMissaoDAO.buscarPorUsuarioEMissao(con, idUsuario, idMissao);
+                if (andamento == null) {
+                    andamento = new UsuarioMissao();
+                    Usuario dono = new Usuario();
+                    dono.setIdUsuario(idUsuario);
+                    andamento.setUsuario(dono);
+                    Missao referencia = new Missao();
+                    referencia.setIdMissao(idMissao);
+                    andamento.setMissao(referencia);
+                    andamento.setTentativas(1);
+                    andamento.setProgressoAtual(progresso);
+                    usuarioMissaoDAO.cadastrar(con, andamento);
+                } else {
+                    usuarioMissaoDAO.atualizarProgresso(con, andamento.getIdUsuarioMissao(),
+                            andamento.getTentativas() + 1, progresso);
+                }
+
+                boolean concluiu = aprovado && progresso >= missao.getLimiteRealizacoes();
+                if (concluiu) {
+                    int pontos = missao.getPontuacao() != null ? missao.getPontuacao().getValorBase() : 0;
+                    new CarteiraDAO().creditarPontos(con, idUsuario, pontos);
+                    usuarioMissaoDAO.registrarConclusao(con, andamento.getIdUsuarioMissao(), dia);
+                }
+
+                con.commit();
+                confirmado = true;
+                return concluiu;
+            } finally {
+                // Desfaz antes de devolver a conexão: no Oracle, ligar o autocommit com a
+                // transação aberta confirmaria tudo.
+                if (!confirmado) {
+                    con.rollback();
+                }
+                con.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new IllegalStateException("Não foi possível gravar o upload.", e);
+        }
+    }
+
+    /** Insere o upload na conexão da transação e preenche o id gerado no objeto. */
+    private void inserir(Connection con, Upload upload) throws SQLException {
+        String sql = "INSERT INTO Upload (ds_status, dt_envio, dt_analise, ds_arquivo, ds_analise, "
+                + "nr_confianca_duplicidade, id_usuario, id_missao) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = con.prepareStatement(sql, new String[]{"ID_UPLOAD"})) {
+            ps.setString(1, upload.getStatus().toString());
+            ps.setDate(2, Date.valueOf(upload.getDataEnvio()));
+            ps.setDate(3, upload.getDataAnalise() != null ? Date.valueOf(upload.getDataAnalise()) : null);
+            ps.setString(4, upload.getArquivo());
+            ps.setString(5, upload.getAnalise());
+            ps.setInt(6, upload.getConfiancaDuplicidade());
+            ps.setInt(7, upload.getUsuario().getIdUsuario());
+            ps.setInt(8, upload.getMissao().getIdMissao());
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (!rs.next()) {
+                    throw new SQLException("O banco não devolveu o id do upload.");
+                }
+                upload.setIdUpload(rs.getInt(1));
+            }
+        }
+    }
 }

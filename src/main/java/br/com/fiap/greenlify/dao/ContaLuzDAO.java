@@ -186,4 +186,53 @@ public class ContaLuzDAO {
         }
         return contas;
     }
+
+    /**
+     * Busca a conta de luz pendente de um usuário, usada no prêmio do 1º lugar
+     * do ranking (pagamento integral da conta).
+     * <p>
+     * A tabela Conta_Luz não guarda o dono da conta; o vínculo usuário + conta
+     * existe em Pagamento_Conta. Por isso, a conta pendente do usuário é a mais
+     * recente conta em que ele já fez algum pagamento e cujo total pago (por
+     * todos os pagamentos) ainda é menor que o valor da conta.
+     * <p>
+     * O objeto devolvido traz em {@code valorConta} o valor <b>restante</b>
+     * (valor da conta menos o já pago), para que o prêmio quite a conta sem pagar
+     * a mais. Nenhuma alteração é feita no banco.
+     *
+     * @param idUsuario identificador do usuário
+     * @return a conta pendente (com o valor restante), ou {@code null} se não houver
+     */
+    public ContaLuz buscarPendenteDoUsuario(int idUsuario) {
+        String sql = "SELECT * FROM ("
+                + "  SELECT c.id_conta_luz, c.ds_codigo_barra, "
+                + "         c.vl_conta - NVL((SELECT SUM(p.vl_pago) FROM Pagamento_Conta p "
+                + "                           WHERE p.id_conta_luz = c.id_conta_luz), 0) AS vl_restante "
+                + "  FROM Conta_Luz c "
+                + "  WHERE EXISTS (SELECT 1 FROM Pagamento_Conta pu "
+                + "                WHERE pu.id_conta_luz = c.id_conta_luz AND pu.id_usuario = ?) "
+                + "    AND c.vl_conta > NVL((SELECT SUM(p2.vl_pago) FROM Pagamento_Conta p2 "
+                + "                          WHERE p2.id_conta_luz = c.id_conta_luz), 0) "
+                + "  ORDER BY c.id_conta_luz DESC"
+                + ") WHERE ROWNUM = 1";
+        ContaLuz conta = null;
+
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, idUsuario);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    conta = new ContaLuz();
+                    conta.setIdContaLuz(rs.getInt(1));
+                    conta.setCodigoBarras(rs.getString(2));
+                    conta.setValorConta(rs.getDouble(3));
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return conta;
+    }
 }
