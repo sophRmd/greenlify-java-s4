@@ -1,6 +1,8 @@
 HELP.md
 .mvn/wrapper/maven-wrapper.jar
 .env
+.env.*
+!.env.example
 target/
 ### STS ###
 .apt_generated

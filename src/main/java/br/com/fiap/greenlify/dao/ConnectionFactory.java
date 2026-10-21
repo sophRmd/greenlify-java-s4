@@ -40,9 +40,14 @@ public class ConnectionFactory {
         String usuario = System.getenv("SPRING_DATASOURCE_USERNAME");
         String senha = System.getenv("SPRING_DATASOURCE_PASSWORD");
 
-        if (url == null || usuario == null || senha == null) {
+        StringBuilder ausentes = new StringBuilder();
+        if (vazio(url)) ausentes.append(" SPRING_DATASOURCE_URL");
+        if (vazio(usuario)) ausentes.append(" SPRING_DATASOURCE_USERNAME");
+        if (vazio(senha)) ausentes.append(" SPRING_DATASOURCE_PASSWORD");
+        if (ausentes.length() > 0) {
             throw new IllegalStateException(
-                    "Variáveis de ambiente do Oracle não configuradas."
+                    "Variáveis de ambiente do Oracle não configuradas:" + ausentes
+                            + ". Consulte o .env.example."
             );
         }
 
@@ -61,9 +66,21 @@ public class ConnectionFactory {
         config.setIdleTimeout(600_000);        // 10 min
         config.setMaxLifetime(1_500_000);      // 25 min (renova antes de firewall/Oracle derrubar)
 
-        HikariDataSource ds = new HikariDataSource(config);
+        HikariDataSource ds;
+        try {
+            ds = new HikariDataSource(config);
+        } catch (RuntimeException e) {
+            // não expõe URL/usuário/senha na mensagem; a causa original fica encadeada
+            throw new IllegalStateException(
+                    "Não foi possível conectar ao banco Oracle. Verifique URL, usuário, senha e rede.", e
+            );
+        }
         Runtime.getRuntime().addShutdownHook(new Thread(ds::close));
         return ds;
+    }
+
+    private static boolean vazio(String valor) {
+        return valor == null || valor.isBlank();
     }
 
     /** Tamanho máximo do pool. Pode ser ajustado pela variável DB_POOL_MAX (padrão 3). */
@@ -91,16 +108,4 @@ public class ConnectionFactory {
             );
         }
     }
-   /* public static Connection obterConexao(){
-        Connection conexao = null;
-        try{
-
-            conexao = DriverManager.getConnection(
-                    "jdbc:oracle:thin:@oracle.fiap.com.br:1521:orcl",
-                    "pf1551", "senha");
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        return conexao;
-    }*/
 }

@@ -7,10 +7,11 @@ services:
     environment:
       SERVER_PORT: "${PORT:-8080}"
 
-      SPRING_DATASOURCE_URL: "jdbc:oracle:thin:@//oracle.fiap.com.br:1521/orcl"
-      SPRING_DATASOURCE_USERNAME: "${ORACLE_USER}"
-      SPRING_DATASOURCE_PASSWORD: "${ORACLE_PASSWORD}"
+      SPRING_DATASOURCE_URL: "${ORACLE_URL:?Defina ORACLE_URL no .env}"
+      SPRING_DATASOURCE_USERNAME: "${ORACLE_USER:?Defina ORACLE_USER no .env}"
+      SPRING_DATASOURCE_PASSWORD: "${ORACLE_PASSWORD:?Defina ORACLE_PASSWORD no .env}"
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: "oracle.jdbc.OracleDriver"
+      DB_POOL_MAX: "${DB_POOL_MAX:-3}"
 
       # Redis do ranking all time (se cair, o ranking usa o Oracle)
       REDIS_HOST: "redis"

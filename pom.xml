@@ -11,21 +11,8 @@
 	<groupId>br.com.fiap</groupId>
 	<artifactId>greenlify</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
-	<description/>
-	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
+	<name>greenlify</name>
+	<description>Plataforma GreenLify</description>
 	<properties>
 		<java.version>25</java.version>
 	</properties>
