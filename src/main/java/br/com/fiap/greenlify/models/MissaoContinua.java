@@ -3,6 +3,7 @@ package br.com.fiap.greenlify.models;
 import br.com.fiap.greenlify.dao.PontuacaoDAO;
 import br.com.fiap.greenlify.enums.CategoriaEnum;
 import br.com.fiap.greenlify.enums.TipoMetricaEnum;
+import br.com.fiap.greenlify.enums.StatusUploadEnum;
 import br.com.fiap.greenlify.enums.TipoMissaoEnum;
 
 /**
@@ -58,10 +59,45 @@ public class MissaoContinua extends Missao {
         this.valorMetrica = valorMetrica;
     }
 
+    /**
+     * Regra única de validação do envio: só um upload APROVADO vale como realização
+     * (progresso, conclusão e pontos). Em análise, parcialmente aprovado e reprovado não valem.
+     */
+    public static boolean realizacaoValida(StatusUploadEnum statusUpload) {
+        return statusUpload == StatusUploadEnum.APROVADO;
+    }
+
+    /**
+     * Conclusão efetiva: o usuário concluiu a missão quando as realizações válidas do ciclo
+     * (uploads aprovados no mês) atingem o limite de realizações.
+     */
+    public boolean concluida(int realizacoesValidas) {
+        return realizacoesValidas >= limiteRealizacoes;
+    }
+
+    /** Pontos configurados para a missão (valor da pontuação cadastrada), ou 0 se não houver. */
+    public int pontosConfigurados() {
+        return pontuacao != null ? pontuacao.getValorBase() : 0;
+    }
+
+    /**
+     * Pontuação elegível: os pontos configurados só são devidos quando o envio atual é válido
+     * e é ele que conclui a missão; qualquer outro caso vale 0 (progresso sem conclusão não pontua).
+     *
+     * @param statusUpload       status do upload que está sendo registrado
+     * @param realizacoesValidas realizações válidas do ciclo, já contando este envio
+     */
+    public int pontosElegiveis(StatusUploadEnum statusUpload, int realizacoesValidas) {
+        if (realizacaoValida(statusUpload) && concluida(realizacoesValidas)) {
+            return pontosConfigurados();
+        }
+        return 0;
+    }
+
     @Override
     public String toString() {
         PontuacaoDAO pontuacaoDAO = new PontuacaoDAO();
-        Pontuacao pont = pontuacaoDAO.buscarPorId(pontuacao.getIdPontuacao());
+        Pontuacao pont = pontuacao != null ? pontuacaoDAO.buscarPorId(pontuacao.getIdPontuacao()) : null;
 
         if (pont != null) {
             return "\n\nID: " + getIdMissao() +

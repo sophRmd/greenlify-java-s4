@@ -13,6 +13,19 @@ public class Resgate {
     private Usuario usuario;
     private Recompensa recompensa;
 
+    /**
+     * O prêmio de um ranking é gravado com a data final do período: usuário + data identifica
+     * usuário + ranking. Esta é a única definição dessa data.
+     */
+    public static LocalDate dataDoRanking(Ranking ranking) {
+        return ranking != null ? ranking.getDataFim() : null;
+    }
+
+    /** Se este resgate é o prêmio do ranking informado. */
+    public boolean pertenceAoRanking(Ranking ranking) {
+        return dataConcessao != null && dataConcessao.equals(dataDoRanking(ranking));
+    }
+
     public int getIdResgate() {
         return idResgate;
     }

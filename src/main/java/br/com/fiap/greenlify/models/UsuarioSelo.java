@@ -13,6 +13,22 @@ public class UsuarioSelo {
     private Usuario usuario;
     private Selo selo;
 
+    /** Regra de coleta: o saldo de pontos da carteira precisa cobrir os pontos necessários do selo. */
+    public static boolean saldoSuficiente(int saldoPontos, Selo selo) {
+        return selo != null && saldoPontos >= selo.getPontosNecessarios();
+    }
+
+    /** Regra de coleta: a data é obrigatória e não pode ser futura. */
+    public static boolean dataColetaValida(LocalDate dataColeta, LocalDate hoje) {
+        return dataColeta != null && hoje != null && !dataColeta.isAfter(hoje);
+    }
+
+    /** Se este registro é a coleta do selo informado pelo usuário informado (um selo por usuário). */
+    public boolean ehColetaDe(int idUsuario, int idSelo) {
+        return usuario != null && selo != null
+                && usuario.getIdUsuario() == idUsuario && selo.getIdSelo() == idSelo;
+    }
+
     public int getIdUsuarioSelo() {
         return idUsuarioSelo;
     }

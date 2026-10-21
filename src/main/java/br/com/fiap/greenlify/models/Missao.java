@@ -18,6 +18,22 @@ public class Missao {
     private CategoriaEnum categoria;
     private TipoMissaoEnum tipoMissao;
 
+    /**
+     * Regra do tipo (fonte única, vale também para referências por id): uma conclusão válida
+     * de missão contínua ou mensal atualiza o streak do usuário.
+     */
+    public boolean atualizaStreak() {
+        return tipoMissao != null;
+    }
+
+    /**
+     * Regra do tipo (fonte única, vale também para referências por id): só a missão mensal
+     * contribui para o ranking; a contínua não.
+     */
+    public boolean pontuaNoRanking() {
+        return tipoMissao == TipoMissaoEnum.MISSAO_MENSAL;
+    }
+
     @Override
     public String toString() {
         return "\n\nID Missão: " + idMissao +

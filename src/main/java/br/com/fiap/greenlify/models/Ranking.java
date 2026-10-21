@@ -24,11 +24,53 @@ public class Ranking {
     private TipoRankingEnum tipo;
     private StatusRankingEnum status;
 
+    /** Calcula as posições conforme o tipo do ranking (individual: usuários; grupal: grupos). */
+    public List<PosicaoRanking> calcularPosicoes() {
+        if (tipo == null) {
+            throw new IllegalStateException("O ranking não tem tipo definido.");
+        }
+        return switch (tipo) {
+            case INDIVIDUAL -> calcularRankingUsuarios();
+            case GRUPAL -> calcularRankingGrupos();
+        };
+    }
+
+    /**
+     * Estados válidos: {@code ABERTO -> FECHADO}. Só ranking aberto aceita atualização;
+     * um ranking fechado não volta a ser aberto.
+     */
+    public boolean aceitaAtualizacao() {
+        return status == StatusRankingEnum.ABERTO;
+    }
+
+    /** Se o período é válido (início e fim informados, início não depois do fim). */
+    public boolean periodoValido() {
+        return dataInicio != null && dataFim != null && !dataInicio.isAfter(dataFim);
+    }
+
+    /** Se este ranking aberto já passou do fim do período em {@code hoje} e deve ser fechado. */
+    public boolean deveFechar(LocalDate hoje) {
+        return aceitaAtualizacao() && dataFim != null && hoje != null && dataFim.isBefore(hoje);
+    }
+
+    /**
+     * Fecha o ranking (única mudança de estado permitida).
+     *
+     * @return {@code true} se estava aberto e foi fechado; {@code false} se já estava fechado
+     */
+    public boolean fechar() {
+        if (!aceitaAtualizacao()) {
+            return false;
+        }
+        status = StatusRankingEnum.FECHADO;
+        return true;
+    }
+
     /**
      * Calcula o ranking de usuários do período (de {@code dataInicio} a
      * {@code dataFim}): ordena do maior para o menor número de missões
      * concluídas dentro do período e, em caso de empate, pelo cadastro mais
-     * antigo (menor id de usuário); a carteira não entra na classificação, atribuindo a posição correspondente.
+     * antigo (menor id de usuário); a carteira não entra na classificação.
      *
      * @return lista de posições de ranking dos usuários, já ordenada e
      *         numerada, ou lista vazia caso não existam usuários cadastrados
@@ -161,7 +203,9 @@ public class Ranking {
             posicoes.add(pr);
         }
 
-        posicoes.sort(Comparator.comparingInt(PosicaoRanking::getPontuacao).reversed());
+        // empate: grupo cadastrado primeiro (menor id), para a ordem ser sempre a mesma
+        posicoes.sort(Comparator.comparingInt(PosicaoRanking::getPontuacao).reversed()
+                .thenComparingInt(p -> p.getGrupo().getIdGrupo()));
         for (int i = 0; i < posicoes.size(); i++) {
             posicoes.get(i).setPosicao(i + 1);
         }

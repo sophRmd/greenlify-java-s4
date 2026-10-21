@@ -6,6 +6,10 @@ import br.com.fiap.greenlify.enums.ImpactoEnum;
 /**
  * Representa a pontuação atribuída a uma missão, calculada a partir da
  * combinação entre o impacto ambiental e a dificuldade de realização.
+ *
+ * <p>{@code valorBase} é a configuração gravada (coluna {@code nr_pontuacao}) e é o único valor
+ * usado para creditar pontos: a missão aponta para uma pontuação e quem credita lê o valor dela.
+ * A tabela de {@link #calculaPontuacao} só gera o valor padrão no cadastro da pontuação.</p>
  */
 public class Pontuacao {
 
@@ -88,7 +92,7 @@ public class Pontuacao {
     }
 
     public void setValorBase(int valorBase) {
-        this.valorBase = valorBase;
+        this.valorBase = Math.max(0, valorBase);   // pontuação nunca é negativa
     }
 
     @Override

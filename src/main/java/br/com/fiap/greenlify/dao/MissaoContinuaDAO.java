@@ -28,8 +28,12 @@ public class MissaoContinuaDAO {
      * @param missao    dados básicos da missão a ser cadastrada
      * @param continua  dados específicos da missão contínua
      * @param pontuacao pontuação a ser associada à missão
+     * @throws IllegalStateException se o banco falhar (nada é gravado)
      */
     public void cadastrarMissao(Missao missao, MissaoContinua continua, Pontuacao pontuacao) {
+        if (pontuacao == null) {
+            throw new IllegalArgumentException("A pontuação é obrigatória.");
+        }
         Connection conexao = ConnectionFactory.obterConexao();
         PreparedStatement psMissao = null;
         PreparedStatement psContinua = null;
@@ -78,6 +82,7 @@ public class MissaoContinuaDAO {
                 ex.printStackTrace();
             }
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível cadastrar a missão contínua.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -96,6 +101,9 @@ public class MissaoContinuaDAO {
      *
      * @param continua dados específicos da missão contínua a serem atualizados
      * @param missao   dados básicos da missão a serem atualizados
+     * @throws IllegalArgumentException se a missão não existe ou se o limite de realizações muda
+     *                                  depois que usuários já participaram da missão
+     * @throws IllegalStateException    se o banco falhar (nada é gravado)
      */
     public void alterar(MissaoContinua continua, Missao missao) {
         Connection conexao = ConnectionFactory.obterConexao();
@@ -104,6 +112,20 @@ public class MissaoContinuaDAO {
 
         try {
             conexao.setAutoCommit(false);
+
+            // Trava a missão e confere, na mesma transação, o que já existe de participação:
+            // o limite define quando os usuários concluem, então não pode mudar com registros feitos.
+            if (!new UsuarioMissaoDAO().travarMissao(conexao, missao.getIdMissao())) {
+                throw new IllegalArgumentException("Missão contínua não encontrada");
+            }
+            Integer limiteAtual = lerLimite(conexao, missao.getIdMissao());
+            if (limiteAtual == null) {
+                throw new IllegalArgumentException("Missão contínua não encontrada");
+            }
+            if (limiteAtual != continua.getLimiteRealizacoes() && temParticipacao(conexao, missao.getIdMissao())) {
+                throw new IllegalArgumentException(
+                        "O limite de realizações não pode ser alterado: já existem usuários ou uploads nesta missão.");
+            }
 
             psMissao = conexao.prepareStatement("UPDATE Missao SET nm_missao = ?, ds_missao = ?, ds_requisitos = ?, ds_comprovacao = ?," +
                     " ds_categoria = ?, ds_tipo_missao = ? WHERE id_missao = ?");
@@ -130,6 +152,15 @@ public class MissaoContinuaDAO {
             psMissao.close();
             psContinua.close();
 
+        } catch (IllegalArgumentException e) {
+            try {
+                if (conexao != null) {
+                    conexao.rollback();
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+            throw e;
         } catch (SQLException e) {
             try {
                 if (conexao != null) {
@@ -139,6 +170,7 @@ public class MissaoContinuaDAO {
                 ex.printStackTrace();
             }
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível alterar a missão contínua.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -156,6 +188,8 @@ public class MissaoContinuaDAO {
      * {@code Missao}, dentro de uma mesma transação.
      *
      * @param continua missão contínua a ser removida
+     * @throws IllegalArgumentException se a missão já tem usuários ou uploads (a exclusão apagaria o histórico)
+     * @throws IllegalStateException    se o banco falhar (nada é removido)
      */
     public void excluir(MissaoContinua continua) {
         Connection conexao = ConnectionFactory.obterConexao();
@@ -164,6 +198,12 @@ public class MissaoContinuaDAO {
 
         try {
             conexao.setAutoCommit(false);
+
+            if (new UsuarioMissaoDAO().travarMissao(conexao, continua.getIdMissao())
+                    && temParticipacao(conexao, continua.getIdMissao())) {
+                throw new IllegalArgumentException(
+                        "A missão não pode ser excluída: já existem usuários ou uploads nela.");
+            }
 
             psContinua = conexao.prepareStatement("DELETE FROM Missao_continua WHERE id_missao = ?");
             psContinua.setInt(1, continua.getIdMissao());
@@ -178,6 +218,15 @@ public class MissaoContinuaDAO {
             psContinua.close();
             psMissao.close();
 
+        } catch (IllegalArgumentException e) {
+            try {
+                if (conexao != null) {
+                    conexao.rollback();
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+            throw e;
         } catch (SQLException e) {
             try {
                 if (conexao != null) {
@@ -187,6 +236,7 @@ public class MissaoContinuaDAO {
                 ex.printStackTrace();
             }
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível excluir a missão contínua.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -194,6 +244,30 @@ public class MissaoContinuaDAO {
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
+            }
+        }
+    }
+
+    /** Limite de realizações atual da missão, ou {@code null} se não for uma missão contínua. */
+    private Integer lerLimite(Connection con, int idMissao) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement(
+                "SELECT nr_limite_realizacoes FROM Missao_Continua WHERE id_missao = ?")) {
+            ps.setInt(1, idMissao);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : null;
+            }
+        }
+    }
+
+    /** Indica se já há usuário (Usuario_Missao) ou upload ligado à missão. */
+    private boolean temParticipacao(Connection con, int idMissao) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement(
+                "SELECT (SELECT COUNT(*) FROM Usuario_Missao WHERE id_missao = ?) "
+                        + "+ (SELECT COUNT(*) FROM Upload WHERE id_missao = ?) FROM DUAL")) {
+            ps.setInt(1, idMissao);
+            ps.setInt(2, idMissao);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
             }
         }
     }

@@ -25,51 +25,6 @@ import java.util.Map;
 public class UploadDAO {
 
     /**
-     * Cadastra um novo upload e preenche o id gerado pelo banco no próprio objeto.
-     *
-     * @param upload dados do upload a ser gravado
-     */
-    public void cadastrar(Upload upload) {
-        Connection conexao = ConnectionFactory.obterConexao();
-        PreparedStatement psUpload = null;
-
-        try {
-            String sql = "INSERT INTO Upload (ds_status, dt_envio, dt_analise, ds_arquivo, ds_analise, nr_confianca_duplicidade, id_usuario, id_missao) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-            psUpload = conexao.prepareStatement(sql, new String[]{"ID_UPLOAD"});
-            psUpload.setString(1, upload.getStatus().toString());
-            psUpload.setDate(2, Date.valueOf(upload.getDataEnvio()));
-            psUpload.setDate(3, upload.getDataAnalise() != null ? Date.valueOf(upload.getDataAnalise()) : null);
-            psUpload.setString(4, upload.getArquivo());
-            psUpload.setString(5, upload.getAnalise());
-            psUpload.setInt(6, upload.getConfiancaDuplicidade());
-            psUpload.setInt(7, upload.getUsuario().getIdUsuario());
-            psUpload.setInt(8, upload.getMissao().getIdMissao());
-
-            psUpload.executeUpdate();
-
-            ResultSet rsUpload = psUpload.getGeneratedKeys();
-            if (rsUpload.next()) {
-                upload.setIdUpload(rsUpload.getInt(1));
-            }
-            rsUpload.close();
-
-            psUpload.close();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    /**
      * Upload + Usuário (u_) + Missão contínua (m_, mc_, p_) em uma única consulta.
      * A missão só vem preenchida se for uma missão contínua (mesmo critério do
      * MissaoContinuaDAO.buscarPorId, que usa INNER JOIN com Missao_Continua).
@@ -307,17 +262,20 @@ public class UploadDAO {
      * frames, progresso do usuário na missão e, se o envio conclui a missão, o crédito dos
      * pontos na carteira e a data de conclusão. Se qualquer etapa falhar, nada é gravado.
      * <p>
-     * Primeiro trava a linha do usuário (FOR UPDATE) e só então confere o limite do mês:
-     * dois envios simultâneos do mesmo usuário ficam em fila, e o segundo enxerga o
-     * progresso do primeiro, então os pontos nunca são creditados em duplicidade.
+     * Primeiro trava a linha do usuário e a da missão (FOR UPDATE) e só então confere o limite
+     * do mês: dois envios simultâneos do mesmo usuário ficam em fila, e o segundo enxerga o
+     * progresso do primeiro, então os pontos nunca são creditados em duplicidade. O limite e a
+     * pontuação são relidos do banco já com a missão travada (não vêm do objeto carregado antes),
+     * então uma alteração da missão pelo administrador não é perdida nem aplicada pela metade.
      * O saldo é somado pelo próprio SQL ({@link CarteiraDAO#creditarPontos}).
      * <p>
-     * O progresso é do ciclo mensal: uploads aprovados no mês do envio (incluindo este).
+     * O progresso é do ciclo mensal e só conta uploads APROVADOS no mês do envio (incluindo este);
+     * envios reprovados ou parcialmente aprovados não avançam o progresso nem pontuam.
      *
      * @param upload      upload já analisado (status, datas e dono preenchidos)
      * @param fingerprint fingerprint do vídeo, ou {@code null} se o arquivo foi recusado
      * @param frames      frames da fingerprint (vazio se não houver fingerprint)
-     * @param missao      missão contínua do envio, com limite e pontuação carregados
+     * @param missao      missão contínua do envio (só o id é usado; as regras vêm do banco)
      * @return {@code true} se este envio concluiu a missão no mês (pontos creditados)
      * @throws IllegalArgumentException se o usuário não existe ou já atingiu o limite do mês
      * @throws IllegalStateException    se o banco falhar (nada foi gravado)
@@ -338,9 +296,16 @@ public class UploadDAO {
                 if (!usuarioMissaoDAO.travarUsuario(con, idUsuario)) {
                     throw new IllegalArgumentException("O usuário informado não existe.");
                 }
+                if (!usuarioMissaoDAO.travarMissao(con, idMissao)) {
+                    throw new IllegalArgumentException("A missão informada não existe.");
+                }
+                RegrasContinua regras = lerRegrasContinua(con, idMissao);
+                if (regras == null) {
+                    throw new IllegalArgumentException("A missão informada não é uma missão contínua.");
+                }
 
                 int aprovadosNoCiclo = contarAprovadosNoCiclo(con, idUsuario, idMissao, dia);
-                if (aprovadosNoCiclo >= missao.getLimiteRealizacoes()) {
+                if (aprovadosNoCiclo >= regras.limite()) {
                     throw new IllegalArgumentException("O usuário já concluiu essa missão neste mês.");
                 }
 
@@ -374,10 +339,9 @@ public class UploadDAO {
                             andamento.getTentativas() + 1, progresso);
                 }
 
-                boolean concluiu = aprovado && progresso >= missao.getLimiteRealizacoes();
+                boolean concluiu = aprovado && progresso >= regras.limite();
                 if (concluiu) {
-                    int pontos = missao.getPontuacao() != null ? missao.getPontuacao().getValorBase() : 0;
-                    new CarteiraDAO().creditarPontos(con, idUsuario, pontos);
+                    new CarteiraDAO().creditarPontos(con, idUsuario, regras.pontos());
                     usuarioMissaoDAO.registrarConclusao(con, andamento.getIdUsuarioMissao(), dia);
                 }
 
@@ -395,6 +359,25 @@ public class UploadDAO {
         } catch (SQLException e) {
             e.printStackTrace();
             throw new IllegalStateException("Não foi possível gravar o upload.", e);
+        }
+    }
+
+    /** Limite de realizações por mês e pontos da missão contínua, lidos dentro da transação. */
+    private record RegrasContinua(int limite, int pontos) {
+    }
+
+    /** Lê as regras atuais da missão contínua; {@code null} se a missão não é contínua. */
+    private RegrasContinua lerRegrasContinua(Connection con, int idMissao) throws SQLException {
+        String sql = "SELECT mc.nr_limite_realizacoes, p.nr_pontuacao FROM Missao_Continua mc "
+                + "LEFT JOIN Pontuacao p ON p.id_pontuacao = mc.id_pontuacao WHERE mc.id_missao = ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idMissao);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return null;
+                }
+                return new RegrasContinua(rs.getInt(1), rs.getInt(2));   // sem pontuação: getInt devolve 0
+            }
         }
     }
 

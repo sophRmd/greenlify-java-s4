@@ -2,6 +2,7 @@ package br.com.fiap.greenlify.dao;
 
 import br.com.fiap.greenlify.enums.StatusUploadEnum;
 import br.com.fiap.greenlify.models.Missao;
+import br.com.fiap.greenlify.models.Streak;
 import br.com.fiap.greenlify.models.Usuario;
 import br.com.fiap.greenlify.models.UsuarioMissao;
 
@@ -34,83 +35,61 @@ public class UsuarioMissaoDAO {
     public record Avanco(int progresso, boolean concluiu) {
     }
 
-    /**
-     * Cadastra um novo registro de missão para um usuário. O id_usuario_missao é gerado
-     * pelo banco (auto increment), então fica de fora do INSERT e, ao final,
-     * é preenchido no próprio objeto.
-     *
-     * @param usuarioMissao dados do registro a ser cadastrado
-     */
-    public void cadastrar(UsuarioMissao usuarioMissao) {
-        Connection conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
-
-        try {
-            String sql = "INSERT INTO Usuario_Missao (nr_tentativas, nr_progresso_atual, id_usuario, id_missao) " +
-                    "VALUES (?, ?, ?, ?)";
-            ps = conexao.prepareStatement(sql, new String[]{"ID_USUARIO_MISSAO"});
-            ps.setInt(1, usuarioMissao.getTentativas());
-            ps.setInt(2, usuarioMissao.getProgressoAtual());
-            ps.setInt(3, usuarioMissao.getUsuario().getIdUsuario());
-            ps.setInt(4, usuarioMissao.getMissao().getIdMissao());
-
-            ps.executeUpdate();
-
-            // Recupera o id_usuario_missao gerado automaticamente (IDENTITY) e preenche no objeto
-            ResultSet rsGerado = ps.getGeneratedKeys();
-            if (rsGerado.next()) {
-                usuarioMissao.setIdUsuarioMissao(rsGerado.getInt(1));
-            }
-            rsGerado.close();
-
-            ps.close();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
+    /** Meta e período de vigência de uma missão mensal, lidos dentro da transação. */
+    private record Vigencia(int meta, LocalDate inicio, LocalDate fim) {
     }
 
     /**
-     * Atualiza os dados de um registro de usuário/missão já existente
-     * (normalmente tentativas e progresso atual).
+     * Cadastra o registro de um usuário em uma missão, em uma transação. O id_usuario_missao
+     * é gerado pelo banco (auto increment), então fica de fora do INSERT e, ao final, é
+     * preenchido no próprio objeto.
      *
-     * @param usuarioMissao dados atualizados do registro (o id é usado como referência)
+     * <p>Trava o usuário e a missão (FOR UPDATE) e só então confere: a missão existe, uma
+     * missão mensal ainda não terminou e o usuário ainda não a possui. Assim duas chamadas
+     * simultâneas não geram registro duplicado e o cadastro não corre contra uma alteração
+     * da missão feita pelo administrador.</p>
+     *
+     * @param usuarioMissao dados do registro a ser cadastrado
+     * @throws IllegalArgumentException se o usuário ou a missão não existem, a missão mensal
+     *                                  já terminou ou o usuário já possui a missão
+     * @throws IllegalStateException    se o banco falhar (nada é gravado)
      */
-    public void alterar(UsuarioMissao usuarioMissao) {
-        Connection conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
+    public void cadastrar(UsuarioMissao usuarioMissao) {
+        int idUsuario = usuarioMissao.getUsuario().getIdUsuario();
+        int idMissao = usuarioMissao.getMissao().getIdMissao();
 
-        try {
-            String sql = "UPDATE Usuario_Missao SET nr_tentativas = ?, nr_progresso_atual = ?, " +
-                    "id_usuario = ?, id_missao = ? WHERE id_usuario_missao = ?";
-            ps = conexao.prepareStatement(sql);
-            ps.setInt(1, usuarioMissao.getTentativas());
-            ps.setInt(2, usuarioMissao.getProgressoAtual());
-            ps.setInt(3, usuarioMissao.getUsuario().getIdUsuario());
-            ps.setInt(4, usuarioMissao.getMissao().getIdMissao());
-            ps.setInt(5, usuarioMissao.getIdUsuarioMissao());
+        try (Connection con = ConnectionFactory.obterConexao()) {
+            boolean confirmado = false;
+            try {
+                con.setAutoCommit(false);
 
-            ps.executeUpdate();
-            ps.close();
+                if (!travarUsuario(con, idUsuario)) {
+                    throw new IllegalArgumentException("O usuário informado não existe.");
+                }
+                if (!travarMissao(con, idMissao)) {
+                    throw new IllegalArgumentException("A missão informada não existe.");
+                }
+                Vigencia vigencia = buscarVigenciaMensal(con, idMissao);
+                if (vigencia != null && vigencia.fim() != null && LocalDate.now().isAfter(vigencia.fim())) {
+                    throw new IllegalArgumentException("A missão já terminou.");
+                }
+                if (buscarPorUsuarioEMissao(con, idUsuario, idMissao) != null) {
+                    throw new IllegalArgumentException("O usuário já possui essa missão.");
+                }
 
+                cadastrar(con, usuarioMissao);
+
+                con.commit();
+                confirmado = true;
+            } finally {
+                if (!confirmado) {
+                    con.rollback();
+                }
+                con.setAutoCommit(true);
+            }
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            throw new IllegalStateException("Não foi possível cadastrar a missão do usuário.", e);
         }
     }
 
@@ -118,27 +97,16 @@ public class UsuarioMissaoDAO {
      * Exclui um registro de usuário/missão pelo id.
      *
      * @param idUsuarioMissao id do registro a ser removido
+     * @throws IllegalStateException se o banco falhar
      */
     public void excluir(int idUsuarioMissao) {
-        Connection conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
-
-        try {
-            ps = conexao.prepareStatement("DELETE FROM Usuario_Missao WHERE id_usuario_missao = ?");
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement("DELETE FROM Usuario_Missao WHERE id_usuario_missao = ?")) {
             ps.setInt(1, idUsuarioMissao);
             ps.executeUpdate();
-            ps.close();
-
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            throw new IllegalStateException("Não foi possível excluir o registro de usuário e missão.", e);
         }
     }
 
@@ -366,6 +334,40 @@ public class UsuarioMissaoDAO {
     }
 
     /**
+     * Trava a linha da missão (FOR UPDATE) até o fim da transação: cadastro de usuário na missão
+     * e alteração/exclusão da missão pelo administrador ficam em fila.
+     *
+     * @return {@code false} se a missão não existe
+     */
+    public boolean travarMissao(Connection con, int idMissao) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement(
+                "SELECT id_missao FROM Missao WHERE id_missao = ? FOR UPDATE")) {
+            ps.setInt(1, idMissao);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    /** Meta e período da missão mensal, ou {@code null} se a missão não é mensal. */
+    private Vigencia buscarVigenciaMensal(Connection con, int idMissao) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement(
+                "SELECT vl_meta, dt_inicio, dt_fim FROM Missao_Mensal WHERE id_missao = ?")) {
+            ps.setInt(1, idMissao);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return null;
+                }
+                Date inicio = rs.getDate("dt_inicio");
+                Date fim = rs.getDate("dt_fim");
+                return new Vigencia(rs.getInt("vl_meta"),
+                        inicio != null ? inicio.toLocalDate() : null,
+                        fim != null ? fim.toLocalDate() : null);
+            }
+        }
+    }
+
+    /**
      * Busca o registro do usuário na missão (há no máximo um por par usuário + missão).
      *
      * @return o registro, ou {@code null} se o usuário ainda não começou a missão
@@ -431,20 +433,13 @@ public class UsuarioMissaoDAO {
     // ------------------------------------------------------------------
 
     /**
-     * Conclusões de missões mensais: progresso atingiu a meta (mesma regra do ResumoService).
-     * Cada registro vale uma conclusão, na data de {@code dt_conclusao}.
-     */
-    private static final String SQL_CONCLUIDAS_MENSAIS =
-            "SELECT um.id_usuario AS id_usuario "
-                    + "FROM Usuario_Missao um "
-                    + "JOIN Missao_Mensal mm ON mm.id_missao = um.id_missao "
-                    + "WHERE mm.vl_meta > 0 AND um.nr_progresso_atual >= mm.vl_meta ";
-
-    /**
      * Conclusões de missões contínuas: cada mês em que o usuário teve uploads APROVADOS
      * em número igual ou maior que o limite da missão vale uma conclusão. É contado
      * pelos uploads (e não por Usuario_Missao) porque o progresso reinicia todo mês e
      * assim as conclusões de meses anteriores continuam valendo nos rankings.
+     *
+     * <p>Missões mensais não entram aqui: a conclusão mensal vale para o streak e para os
+     * registros de conclusão (dt_conclusao), não para a pontuação do ranking.</p>
      */
     private static final String SQL_CONCLUIDAS_CONTINUAS =
             "SELECT up.id_usuario AS id_usuario "
@@ -460,9 +455,6 @@ public class UsuarioMissaoDAO {
     /** Monta a consulta de conclusões por usuário, com ou sem filtro de período. */
     private static String sqlConcluidas(boolean comPeriodo) {
         return "SELECT id_usuario, COUNT(*) AS total FROM ("
-                + SQL_CONCLUIDAS_MENSAIS
-                + (comPeriodo ? "AND um.dt_conclusao >= ? AND um.dt_conclusao <= ? " : "")
-                + "UNION ALL "
                 + SQL_CONCLUIDAS_CONTINUAS
                 + (comPeriodo ? "AND up.dt_envio >= ? AND up.dt_envio < ? " : "")
                 + SQL_CONCLUIDAS_CONTINUAS_AGRUPAR
@@ -470,7 +462,7 @@ public class UsuarioMissaoDAO {
     }
 
     /**
-     * Conta, por usuário, todas as missões já concluídas (ranking all time).
+     * Conta, por usuário, todas as missões contínuas já concluídas (ranking all time).
      *
      * @return mapa idUsuario -> total de missões concluídas (só usuários com pelo menos uma)
      */
@@ -479,8 +471,7 @@ public class UsuarioMissaoDAO {
     }
 
     /**
-     * Conta, por usuário, as missões concluídas dentro de um período
-     * (mensais: {@code dt_conclusao}, gravada no momento da conclusão; contínuas: mês dos
+     * Conta, por usuário, as missões contínuas concluídas dentro de um período (mês dos
      * uploads aprovados dentro do período).
      *
      * @param inicio primeiro dia do período (inclusive)
@@ -492,22 +483,14 @@ public class UsuarioMissaoDAO {
     }
 
     /**
-     * Grava a data em que o usuário concluiu a missão. Dentro do mesmo mês a primeira
-     * conclusão é a que vale; em um novo mês (novo ciclo das missões contínuas) a data
-     * é atualizada para a conclusão mais recente, e não fica presa à primeira de todas.
+     * Grava a data em que o usuário concluiu a missão contínua, na conexão (transação) de quem
+     * chamou. Dentro do mesmo mês a primeira conclusão é a que vale; em um novo mês (novo
+     * ciclo das missões contínuas) a data é atualizada para a conclusão mais recente, e não
+     * fica presa à primeira de todas.
      *
      * @param idUsuarioMissao id do registro em Usuario_Missao
      * @param data            dia da conclusão
      */
-    public void registrarConclusao(int idUsuarioMissao, LocalDate data) {
-        try (Connection con = ConnectionFactory.obterConexao()) {
-            registrarConclusao(con, idUsuarioMissao, data);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /** Mesma operação de {@link #registrarConclusao(int, LocalDate)}, na conexão (transação) de quem chamou. */
     public void registrarConclusao(Connection con, int idUsuarioMissao, LocalDate data) throws SQLException {
         String sql = "UPDATE Usuario_Missao SET dt_conclusao = ? "
                 + "WHERE id_usuario_missao = ? AND (dt_conclusao IS NULL OR dt_conclusao < ?)";
@@ -521,15 +504,21 @@ public class UsuarioMissaoDAO {
     }
 
     /**
-     * Avança em um passo o progresso de uma missão mensal do usuário e, se o passo atingir a
-     * meta, grava a data de conclusão. Tudo em uma transação com o usuário travado (FOR UPDATE):
-     * duas chamadas simultâneas não passam da meta nem concluem a missão duas vezes.
+     * Avança em um passo o progresso de uma missão mensal do usuário. Só avança: o
+     * encerramento da missão é uma etapa separada ({@link #encerrarMissaoMensal}), executada
+     * na mesma transação apenas quando o passo atinge a meta.
+     *
+     * <p>Tudo em uma transação com o usuário travado (FOR UPDATE). A meta e o período são lidos
+     * aqui dentro, não vêm do chamador: duas chamadas simultâneas não passam da meta nem
+     * concluem a missão duas vezes, e nenhum passo é aceito fora da vigência. Se qualquer etapa
+     * falhar (inclusive o streak), nada é gravado.</p>
      *
      * @return o novo progresso e se a missão acabou de ser concluída
-     * @throws IllegalArgumentException se o usuário não começou a missão ou ela já foi concluída
+     * @throws IllegalArgumentException se o usuário não começou a missão, ela não é mensal, está
+     *                                  fora do período de vigência ou já foi concluída
      * @throws IllegalStateException    se o banco falhar (nada é gravado)
      */
-    public Avanco avancarProgressoMensal(int idUsuario, int idMissao, int meta, LocalDate dia) {
+    public Avanco avancarProgressoMensal(int idUsuario, int idMissao, LocalDate dia) {
         try (Connection con = ConnectionFactory.obterConexao()) {
             boolean confirmado = false;
             try {
@@ -542,14 +531,28 @@ public class UsuarioMissaoDAO {
                 if (um == null) {
                     throw new IllegalArgumentException("Registro de usuário e missão não encontrado");
                 }
-                if (um.getProgressoAtual() >= meta) {
+                Vigencia vigencia = buscarVigenciaMensal(con, idMissao);
+                if (vigencia == null || vigencia.meta() <= 0) {
+                    throw new IllegalArgumentException("A missão informada não é uma missão mensal.");
+                }
+                if (vigencia.inicio() == null || vigencia.fim() == null
+                        || dia.isBefore(vigencia.inicio()) || dia.isAfter(vigencia.fim())) {
+                    throw new IllegalArgumentException("A missão está fora do período de vigência.");
+                }
+                if (um.concluida(vigencia.meta())) {
                     throw new IllegalArgumentException("A missão já foi concluída.");
                 }
 
-                boolean concluiu = um.avancarProgresso(meta);
+                // 1) avanço: só o progresso e a tentativa
+                if (!um.avancarProgresso(vigencia.meta())) {
+                    throw new IllegalArgumentException("A missão já foi concluída.");
+                }
                 atualizarProgresso(con, um.getIdUsuarioMissao(), um.getTentativas(), um.getProgressoAtual());
+
+                // 2) encerramento: só se este passo atingiu a meta
+                boolean concluiu = um.concluida(vigencia.meta());
                 if (concluiu) {
-                    registrarConclusao(con, um.getIdUsuarioMissao(), dia);
+                    encerrarMissaoMensal(con, idUsuario, um.getIdUsuarioMissao(), dia);
                 }
 
                 con.commit();
@@ -567,6 +570,79 @@ public class UsuarioMissaoDAO {
         }
     }
 
+    /**
+     * Encerra a missão mensal do usuário, na conexão (transação) de quem chamou: grava a data de
+     * conclusão (uma única vez, por isso exige dt_conclusao ainda vazia) e atualiza o streak
+     * do usuário. Não mexe em ranking: a missão mensal não pontua nele.
+     *
+     * @throws IllegalArgumentException se a missão já tinha sido encerrada
+     */
+    public void encerrarMissaoMensal(Connection con, int idUsuario, int idUsuarioMissao, LocalDate dia)
+            throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement(
+                "UPDATE Usuario_Missao SET dt_conclusao = ? "
+                        + "WHERE id_usuario_missao = ? AND dt_conclusao IS NULL")) {
+            ps.setDate(1, Date.valueOf(dia));
+            ps.setInt(2, idUsuarioMissao);
+            if (ps.executeUpdate() == 0) {
+                throw new IllegalArgumentException("A missão já foi concluída.");
+            }
+        }
+        registrarAtividadeNoStreak(con, idUsuario, dia);
+    }
+
+    /**
+     * Atualiza a sequência (streak) do usuário na transação, pelas regras do model {@link Streak};
+     * cria o registro zerado se ainda não existir. O usuário já está travado pela transação.
+     */
+    private void registrarAtividadeNoStreak(Connection con, int idUsuario, LocalDate dia) throws SQLException {
+        Streak streak = null;
+        try (PreparedStatement ps = con.prepareStatement(
+                "SELECT nr_maior_sequencia, nr_meses_ativos, dt_primeira_atividade, dt_ultima_atividade "
+                        + "FROM Sequencia WHERE id_sequencia = ? FOR UPDATE")) {
+            ps.setInt(1, idUsuario);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    streak = new Streak();
+                    streak.setIdStreak(idUsuario);
+                    streak.setMaiorSequencia(rs.getInt("nr_maior_sequencia"));
+                    streak.setSequenciaAtual(rs.getInt("nr_meses_ativos"));
+                    if (rs.getDate("dt_primeira_atividade") != null) {
+                        streak.setPrimeiraAtividade(rs.getDate("dt_primeira_atividade").toLocalDate());
+                    }
+                    if (rs.getDate("dt_ultima_atividade") != null) {
+                        streak.setUltimaAtividade(rs.getDate("dt_ultima_atividade").toLocalDate());
+                    }
+                }
+            }
+        }
+
+        if (streak == null) {
+            try (PreparedStatement ps = con.prepareStatement(
+                    "INSERT INTO Sequencia (id_sequencia, nr_maior_sequencia, nr_meses_ativos, "
+                            + "dt_primeira_atividade, dt_ultima_atividade, id_usuario) VALUES (?, 0, 0, NULL, NULL, ?)")) {
+                ps.setInt(1, idUsuario);
+                ps.setInt(2, idUsuario);
+                ps.executeUpdate();
+            }
+            streak = new Streak();
+            streak.setIdStreak(idUsuario);
+        }
+
+        streak.registrarAtividadeMensal(dia);
+
+        try (PreparedStatement ps = con.prepareStatement(
+                "UPDATE Sequencia SET nr_maior_sequencia = ?, nr_meses_ativos = ?, "
+                        + "dt_primeira_atividade = ?, dt_ultima_atividade = ? WHERE id_sequencia = ?")) {
+            ps.setInt(1, streak.getMaiorSequencia());
+            ps.setInt(2, streak.getSequenciaAtual());
+            ps.setDate(3, streak.getPrimeiraAtividade() != null ? Date.valueOf(streak.getPrimeiraAtividade()) : null);
+            ps.setDate(4, streak.getUltimaAtividade() != null ? Date.valueOf(streak.getUltimaAtividade()) : null);
+            ps.setInt(5, idUsuario);
+            ps.executeUpdate();
+        }
+    }
+
     /** Executa a contagem com uma conexão local (não usa o campo compartilhado). */
     private Map<Integer, Integer> consultarConcluidas(String sql, LocalDate inicio, LocalDate fim) {
         Map<Integer, Integer> totais = new HashMap<>();
@@ -576,9 +652,7 @@ public class UsuarioMissaoDAO {
 
             if (inicio != null && fim != null) {
                 ps.setDate(1, Date.valueOf(inicio));
-                ps.setDate(2, Date.valueOf(fim));
-                ps.setDate(3, Date.valueOf(inicio));
-                ps.setDate(4, Date.valueOf(fim.plusDays(1)));   // dia seguinte, exclusivo: pega o dia final inteiro
+                ps.setDate(2, Date.valueOf(fim.plusDays(1)));   // dia seguinte, exclusivo: pega o dia final inteiro
             }
 
             try (ResultSet rs = ps.executeQuery()) {

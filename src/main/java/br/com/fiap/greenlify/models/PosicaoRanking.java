@@ -3,6 +3,7 @@ package br.com.fiap.greenlify.models;
 import br.com.fiap.greenlify.dao.ContaLuzDAO;
 import br.com.fiap.greenlify.dao.RecompensaDAO;
 import br.com.fiap.greenlify.dao.ResgateDAO;
+import br.com.fiap.greenlify.enums.TipoRankingEnum;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -59,24 +60,21 @@ public class PosicaoRanking {
             return Resultado.NAO_CONCEDIDA;
         }
 
+        if (ranking.getTipo() == TipoRankingEnum.GRUPAL) {
+            System.out.println("Ranking de grupos não concede recompensa a usuários.");
+            return Resultado.NAO_CONCEDIDA;
+        }
         ResgateDAO resgateDAO = new ResgateDAO();
         // O prêmio do ranking é gravado com a data final do período: usuário + data = usuário + ranking.
-        LocalDate dataConcessao = ranking.getDataFim();
+        LocalDate dataConcessao = Resgate.dataDoRanking(ranking);
         if (resgateDAO.existePorUsuarioEData(usuarioResgatador.getIdUsuario(), dataConcessao)) {
             return Resultado.JA_CONCEDIDA;
         }
 
-        int idRecompensa = 6;
-        if (this.posicao == 1) {
-            idRecompensa = 1;
-        } else if (this.posicao == 2) {
-            idRecompensa = 2;
-        } else if (this.posicao == 3) {
-            idRecompensa = 3;
-        } else if (this.posicao <= 10) {
-            idRecompensa = 4;
-        } else if (this.posicao <= 20) {
-            idRecompensa = 5;
+        int idRecompensa = idRecompensaPorPosicao(this.posicao);
+        if (idRecompensa == 0) {
+            System.out.println("Posição inválida: recompensa não concedida.");
+            return Resultado.NAO_CONCEDIDA;
         }
 
         Recompensa recompensa = new RecompensaDAO().buscarPorId(idRecompensa);
@@ -111,6 +109,42 @@ public class PosicaoRanking {
             System.out.println("Recompensa concedida: " + recompensa.getDescricao());
         }
         return resultado;
+    }
+
+    /**
+     * Faixa de premiação (fonte única): 1º, 2º e 3º lugares têm recompensa própria (ids 1, 2 e 3);
+     * 4º ao 10º, recompensa 4; 11º ao 20º, recompensa 5; demais, recompensa 6.
+     *
+     * @return o id da recompensa cadastrada, ou 0 se a posição for inválida (menor que 1)
+     */
+    public static int idRecompensaPorPosicao(int posicao) {
+        if (posicao < 1) {
+            return 0;
+        }
+        if (posicao <= 3) {
+            return posicao;
+        }
+        if (posicao <= 10) {
+            return 4;
+        }
+        if (posicao <= 20) {
+            return 5;
+        }
+        return 6;
+    }
+
+    /**
+     * Consistência com o tipo do ranking: individual tem usuário e não tem grupo;
+     * grupal tem grupo e não tem usuário.
+     */
+    public boolean compativelCom(TipoRankingEnum tipo) {
+        if (tipo == null) {
+            return false;
+        }
+        return switch (tipo) {
+            case INDIVIDUAL -> usuario != null && grupo == null;
+            case GRUPAL -> grupo != null && usuario == null;
+        };
     }
 
     public int getPosicao() {

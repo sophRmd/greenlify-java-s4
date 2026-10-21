@@ -1,5 +1,7 @@
 package br.com.fiap.greenlify.models;
 
+import br.com.fiap.greenlify.enums.TipoMissaoEnum;
+
 import java.time.LocalDate;
 
 /**
@@ -11,6 +13,26 @@ public class MissaoMensal extends Missao {
     private int meta;
     private LocalDate dataInicio;
     private LocalDate dataFim;
+
+    /** Cria uma missão mensal vazia, já definindo o tipo como {@link TipoMissaoEnum#MISSAO_MENSAL}. */
+    public MissaoMensal() {
+        super();
+        setTipoMissao(TipoMissaoEnum.MISSAO_MENSAL);
+    }
+
+    /**
+     * Vigência: a missão só aceita progresso se o período é válido e o dia está dentro
+     * dele (início e fim inclusive).
+     */
+    public boolean vigenteEm(LocalDate dia) {
+        return dia != null && verificaValidade()
+                && !dia.isBefore(dataInicio) && !dia.isAfter(dataFim);
+    }
+
+    /** Conclusão efetiva: o progresso atingiu a meta. */
+    public boolean metaAtingida(int progresso) {
+        return progresso >= meta;
+    }
 
     @Override
     public String toString() {

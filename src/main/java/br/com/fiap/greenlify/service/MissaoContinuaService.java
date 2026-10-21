@@ -41,9 +41,19 @@ public class MissaoContinuaService {
         missao.setTipoMissao(TipoMissaoEnum.MISSAO_CONTINUA);
 
         // MissaoContinua é usada como Missao e como MissaoContinua; a pontuação vem do DTO.
+        // Se o banco falhar, o DAO desfaz tudo e lança IllegalStateException (não é mais engolido).
         missaoContinuaDAO.cadastrarMissao(missao, missao, missao.getPontuacao());
     }
 
+    /**
+     * Atualiza a missão. Os dados descritivos e a pontuação podem mudar a qualquer momento (a
+     * pontuação só vale para conclusões futuras); o limite de realizações não pode mudar depois
+     * que há usuários ou uploads na missão, para não alterar conclusões já registradas. Essa
+     * regra é conferida pelo DAO, dentro da transação.
+     *
+     * @throws IllegalArgumentException se a missão não existe, o DTO é inválido ou o limite não pode mudar
+     * @throws IllegalStateException    se o banco falhar (nada é gravado)
+     */
     public void atualizar(int id, MissaoContinuaCompletaRequestDTO dto) {
         buscarExistente(id);
         validar(dto);
@@ -56,6 +66,13 @@ public class MissaoContinuaService {
         missaoContinuaDAO.alterar(missao, missao);
     }
 
+    /**
+     * Exclui a missão, desde que ninguém tenha começado ou enviado upload nela (conferido pelo DAO,
+     * dentro da transação), para não apagar nem deixar órfão o histórico dos usuários.
+     *
+     * @throws IllegalArgumentException se a missão não existe ou já tem participações
+     * @throws IllegalStateException    se o banco falhar (nada é removido)
+     */
     public void excluir(int id) {
         MissaoContinua existente = buscarExistente(id);
         missaoContinuaDAO.excluir(existente);

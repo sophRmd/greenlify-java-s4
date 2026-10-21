@@ -34,14 +34,14 @@ public class UsuarioMissaoController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Erro ao atribuir a missão ao usuário: " + e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao atribuir a missão ao usuário: " + e.getMessage());
         }
     }
 
     @GetMapping
-    public ResponseEntity<List<UsuarioMissaoResponseDTO>> listar(
-            @RequestHeader(value = "X-Admin-Email", required = false) String adminEmail,
-            @RequestHeader(value = "X-Admin-Senha", required = false) String adminSenha) {
-        usuarioService.exigirAdministrador(adminEmail, adminSenha);
+    public ResponseEntity<List<UsuarioMissaoResponseDTO>> listar() {
         return ResponseEntity.ok(service.listar());
     }
 
@@ -81,16 +81,14 @@ public class UsuarioMissaoController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluir(
-            @PathVariable int id,
-            @RequestHeader(value = "X-Admin-Email", required = false) String adminEmail,
-            @RequestHeader(value = "X-Admin-Senha", required = false) String adminSenha) {
-        usuarioService.exigirAdministrador(adminEmail, adminSenha);
+    public ResponseEntity<Void> excluir(@PathVariable int id) {
         try {
             service.excluir(id);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }

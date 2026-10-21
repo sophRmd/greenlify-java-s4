@@ -26,11 +26,12 @@ public class MissaoMensalDAO {
      *
      * @param missao dados básicos da missão a ser cadastrada
      * @param mensal dados específicos da missão mensal
+     * @throws IllegalArgumentException se as datas de início e fim não foram informadas
+     * @throws IllegalStateException    se o banco falhar (nada é gravado)
      */
     public void cadastrarMissao(Missao missao, MissaoMensal mensal) {
         if (mensal.getDataInicio() == null || mensal.getDataFim() == null) {
-            System.out.println("Erro ao cadastrar missão.");
-            return;
+            throw new IllegalArgumentException("As datas de início e fim são obrigatórias.");
         }
 
         Connection conexao = ConnectionFactory.obterConexao();
@@ -79,6 +80,7 @@ public class MissaoMensalDAO {
                 ex.printStackTrace();
             }
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível cadastrar a missão mensal.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -97,11 +99,14 @@ public class MissaoMensalDAO {
      *
      * @param mensal dados específicos da missão mensal a serem atualizados
      * @param missao dados básicos da missão a serem atualizados
+     * @throws IllegalArgumentException se a missão não existe, as datas não foram informadas ou a
+     *                                  meta ou o início mudam (ou o fim encurta) depois que
+     *                                  usuários já começaram a missão
+     * @throws IllegalStateException    se o banco falhar (nada é gravado)
      */
     public void alterar(MissaoMensal mensal, Missao missao) {
         if (mensal.getDataInicio() == null || mensal.getDataFim() == null) {
-            System.out.println("Erro ao alterar missão.");
-            return;
+            throw new IllegalArgumentException("As datas de início e fim são obrigatórias.");
         }
 
         Connection conexao = ConnectionFactory.obterConexao();
@@ -110,6 +115,25 @@ public class MissaoMensalDAO {
 
         try {
             conexao.setAutoCommit(false);
+
+            // Trava a missão e confere, na mesma transação, se já há usuários nela: meta e período
+            // definem o que conta como progresso e conclusão, então não podem mudar com registros
+            // feitos. Prorrogar o fim é permitido (não invalida nada do que já foi feito).
+            if (!new UsuarioMissaoDAO().travarMissao(conexao, missao.getIdMissao())) {
+                throw new IllegalArgumentException("Missão mensal não encontrada");
+            }
+            MissaoMensal atual = lerRegras(conexao, missao.getIdMissao());
+            if (atual == null) {
+                throw new IllegalArgumentException("Missão mensal não encontrada");
+            }
+            boolean mudouRegra = atual.getMeta() != mensal.getMeta()
+                    || !mensal.getDataInicio().equals(atual.getDataInicio())
+                    || (atual.getDataFim() != null && mensal.getDataFim().isBefore(atual.getDataFim()));
+            if (mudouRegra && temParticipacao(conexao, missao.getIdMissao())) {
+                throw new IllegalArgumentException(
+                        "A meta e a data de início não podem ser alteradas, e a data de fim só pode ser "
+                                + "prorrogada: já existem usuários nesta missão.");
+            }
 
             psMissao = conexao.prepareStatement("UPDATE Missao SET nm_missao = ?, ds_missao = ?, ds_requisitos = ?, ds_comprovacao = ?," +
                     " ds_categoria = ?, ds_tipo_missao = ? WHERE id_missao = ?");
@@ -134,6 +158,15 @@ public class MissaoMensalDAO {
             psMissao.close();
             psMensal.close();
 
+        } catch (IllegalArgumentException e) {
+            try {
+                if (conexao != null) {
+                    conexao.rollback();
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+            throw e;
         } catch (SQLException e) {
             try {
                 if (conexao != null) {
@@ -143,6 +176,7 @@ public class MissaoMensalDAO {
                 ex.printStackTrace();
             }
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível alterar a missão mensal.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -160,6 +194,8 @@ public class MissaoMensalDAO {
      * {@code Missao}, dentro de uma mesma transação.
      *
      * @param mensal missão mensal a ser removida
+     * @throws IllegalArgumentException se já há usuários na missão (a exclusão apagaria o histórico)
+     * @throws IllegalStateException    se o banco falhar (nada é removido)
      */
     public void excluir(MissaoMensal mensal) {
         Connection conexao = ConnectionFactory.obterConexao();
@@ -168,6 +204,12 @@ public class MissaoMensalDAO {
 
         try {
             conexao.setAutoCommit(false);
+
+            if (new UsuarioMissaoDAO().travarMissao(conexao, mensal.getIdMissao())
+                    && temParticipacao(conexao, mensal.getIdMissao())) {
+                throw new IllegalArgumentException(
+                        "A missão não pode ser excluída: já existem usuários nela.");
+            }
 
             psMensal = conexao.prepareStatement("DELETE FROM Missao_Mensal WHERE id_missao = ?");
             psMensal.setInt(1, mensal.getIdMissao());
@@ -182,6 +224,15 @@ public class MissaoMensalDAO {
             psMensal.close();
             psMissao.close();
 
+        } catch (IllegalArgumentException e) {
+            try {
+                if (conexao != null) {
+                    conexao.rollback();
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+            throw e;
         } catch (SQLException e) {
             try {
                 if (conexao != null) {
@@ -191,6 +242,7 @@ public class MissaoMensalDAO {
                 ex.printStackTrace();
             }
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível excluir a missão mensal.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -198,6 +250,39 @@ public class MissaoMensalDAO {
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
+            }
+        }
+    }
+
+    /** Meta e período atuais da missão mensal (só os campos de regra), ou {@code null} se não for mensal. */
+    private MissaoMensal lerRegras(Connection con, int idMissao) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement(
+                "SELECT vl_meta, dt_inicio, dt_fim FROM Missao_Mensal WHERE id_missao = ?")) {
+            ps.setInt(1, idMissao);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return null;
+                }
+                MissaoMensal regras = new MissaoMensal();
+                regras.setMeta(rs.getInt("vl_meta"));
+                if (rs.getDate("dt_inicio") != null) {
+                    regras.setDataInicio(rs.getDate("dt_inicio").toLocalDate());
+                }
+                if (rs.getDate("dt_fim") != null) {
+                    regras.setDataFim(rs.getDate("dt_fim").toLocalDate());
+                }
+                return regras;
+            }
+        }
+    }
+
+    /** Indica se já há usuário (Usuario_Missao) ligado à missão. */
+    private boolean temParticipacao(Connection con, int idMissao) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement(
+                "SELECT COUNT(*) FROM Usuario_Missao WHERE id_missao = ?")) {
+            ps.setInt(1, idMissao);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
             }
         }
     }

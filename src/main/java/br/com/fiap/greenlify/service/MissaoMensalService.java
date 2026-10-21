@@ -40,9 +40,19 @@ public class MissaoMensalService {
         missao.setTipoMissao(TipoMissaoEnum.MISSAO_MENSAL);
 
         // MissaoMensal é usada como Missao e como MissaoMensal.
+        // Se o banco falhar, o DAO desfaz tudo e lança IllegalStateException (não é mais engolido).
         missaoMensalDAO.cadastrarMissao(missao, missao);
     }
 
+    /**
+     * Atualiza a missão. Os dados descritivos podem mudar a qualquer momento; a meta e a data de
+     * início não podem mudar (e o fim só pode ser prorrogado) depois que usuários começaram a
+     * missão, para não alterar progresso e conclusões já registrados. A regra é conferida pelo
+     * DAO, dentro da transação.
+     *
+     * @throws IllegalArgumentException se a missão não existe, o DTO é inválido ou a regra não pode mudar
+     * @throws IllegalStateException    se o banco falhar (nada é gravado)
+     */
     public void atualizar(int id, MissaoMensalCompletaRequestDTO dto) {
         buscarExistente(id);
         validar(dto);
@@ -55,6 +65,13 @@ public class MissaoMensalService {
         missaoMensalDAO.alterar(missao, missao);
     }
 
+    /**
+     * Exclui a missão, desde que nenhum usuário a tenha começado (conferido pelo DAO, dentro da
+     * transação), para não apagar nem deixar órfão o histórico dos usuários.
+     *
+     * @throws IllegalArgumentException se a missão não existe ou já tem usuários
+     * @throws IllegalStateException    se o banco falhar (nada é removido)
+     */
     public void excluir(int id) {
         MissaoMensal existente = buscarExistente(id);
         missaoMensalDAO.excluir(existente);
@@ -84,7 +101,7 @@ public class MissaoMensalService {
             System.out.println("ERRO: A meta deve ser maior que zero.");
             throw new IllegalArgumentException("A meta deve ser maior que zero.");
         }
-        // O DAO ignora silenciosamente o cadastro/alteração sem as datas.
+        // O DAO também recusa o cadastro/alteração sem as datas.
         if (dto.dataInicio() == null || dto.dataFim() == null) {
             System.out.println("ERRO: As datas de início e fim são obrigatórias");
             throw new IllegalArgumentException("As datas de início e fim são obrigatórias.");
