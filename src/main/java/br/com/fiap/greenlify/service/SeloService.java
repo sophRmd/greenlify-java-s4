@@ -51,6 +51,12 @@ public class SeloService {
         if (selo == null) {
             throw new IllegalArgumentException("Selo não encontrado");
         }
+        // Cada resgate de selo conta na pontuação do grupo: apagar o selo apagaria esses pontos.
+        if (seloDAO.contarResgates(id) > 0) {
+            System.out.println("ERRO: O selo já foi resgatado por usuários.");
+            throw new IllegalArgumentException(
+                    "O selo já foi resgatado por usuários e não pode ser excluído.");
+        }
         seloDAO.excluir(id);
     }
 

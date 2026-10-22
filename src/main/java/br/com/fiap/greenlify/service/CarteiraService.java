@@ -51,15 +51,6 @@ public class CarteiraService {
     }
 
     public void cadastrar(int idUsuario, CarteiraRequestDTO dto) {
-        if (dto.qtdPontos() < 0) {
-            System.out.println("ERRO: A quantidade de pontos não pode ser negativa.");
-            throw new IllegalArgumentException("A quantidade de pontos não pode ser negativa.");
-        }
-        if (dto.valorReal() < 0) {
-            System.out.println("ERRO: O valor em reais não pode ser negativo.");
-            throw new IllegalArgumentException("O valor em reais não pode ser negativo.");
-        }
-
         UsuarioComum usuario = usuarioDAO.buscarPorId(idUsuario);
         if (usuario == null) {
             System.out.println("ERRO: Usuário não encontrado");
@@ -75,18 +66,13 @@ public class CarteiraService {
         carteiraDAO.cadastrar(carteira);
     }
 
+    /**
+     * Pontos e valor em reais pertencem ao servidor e não podem ser alterados pelo cliente, então
+     * não há nada a gravar: o saldo existente é preservado. Só confirma que a carteira existe.
+     */
     public void atualizar(int id, CarteiraRequestDTO dto) {
         if (carteiraDAO.buscarPorId(id) == null)
             throw new IllegalArgumentException("Carteira não encontrada");
-
-        if (dto.qtdPontos() < 0 || dto.valorReal() < 0) {
-            System.out.println("ERRO: Pontos e valor não podem ser negativos.");
-            throw new IllegalArgumentException("Pontos e valor não podem ser negativos.");
-        }
-
-        Carteira carteira = CarteiraMapper.dtoToEntity(dto);
-        carteira.setIdCarteira(id);
-        carteiraDAO.alterar(carteira);
     }
 
     public void excluir(int id) {

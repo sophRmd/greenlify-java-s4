@@ -88,10 +88,11 @@ public class MissaoContinua extends Missao {
      * @param realizacoesValidas realizações válidas do ciclo, já contando este envio
      */
     public int pontosElegiveis(StatusUploadEnum statusUpload, int realizacoesValidas) {
-        if (realizacaoValida(statusUpload) && concluida(realizacoesValidas)) {
-            return pontosConfigurados();
+        if (pontuacao == null) {
+            return 0;
         }
-        return 0;
+        // a regra fica só em Pontuacao.pontosElegiveis
+        return pontuacao.pontosElegiveis(TipoMissaoEnum.MISSAO_CONTINUA, statusUpload, concluida(realizacoesValidas));
     }
 
     @Override

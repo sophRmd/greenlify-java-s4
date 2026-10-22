@@ -2,15 +2,12 @@ package br.com.fiap.greenlify.service;
 
 import br.com.fiap.greenlify.util.ValidadorEntrada;
 import br.com.fiap.greenlify.dao.GrupoDAO;
-import br.com.fiap.greenlify.dao.UsuarioComumDAO;
 import br.com.fiap.greenlify.dto.GrupoRequestDTO;
 import br.com.fiap.greenlify.dto.GrupoResponseDTO;
 import br.com.fiap.greenlify.mapper.GrupoMapper;
 import br.com.fiap.greenlify.models.Grupo;
-import br.com.fiap.greenlify.models.UsuarioComum;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,22 +19,18 @@ public class GrupoService {
     private static final int STATUS_INICIAL = 1;
 
     private final GrupoDAO grupoDAO;
-    private final UsuarioComumDAO usuarioDAO;
 
     public GrupoService() {
         this.grupoDAO = new GrupoDAO();
-        this.usuarioDAO = new UsuarioComumDAO();
     }
 
-    /** Nº de integrantes por grupo, contado a partir de Usuario.id_grupo (a coluna nr_usuarios não é atualizada ao entrar/sair). */
+    /**
+     * Nº de integrantes por grupo, contado a partir de Usuario.id_grupo (a coluna nr_usuarios não é
+     * atualizada ao entrar/sair). Só mede o tamanho do grupo: a pontuação no ranking vem dos selos
+     * resgatados pelos integrantes, não dessa contagem.
+     */
     private Map<Integer, Integer> contarIntegrantes() {
-        Map<Integer, Integer> total = new HashMap<>();
-        for (UsuarioComum u : usuarioDAO.listar()) {
-            if (u.getGrupo() != null) {
-                total.merge(u.getGrupo().getIdGrupo(), 1, Integer::sum);
-            }
-        }
-        return total;
+        return grupoDAO.contarIntegrantes();
     }
 
     public List<GrupoResponseDTO> listar() {
@@ -74,9 +67,11 @@ public class GrupoService {
 
         // O DTO não carrega o id nem o status: o id vem da URL
         // e o status atual é preservado para o UPDATE não zerá-lo.
+        // A quantidade informada pelo cliente é ignorada: o tamanho real do grupo é o nº de integrantes.
         Grupo grupo = GrupoMapper.dtoToEntity(dto);
         grupo.setIdGrupo(id);
         grupo.setStatusGrupo(grupoExiste.getStatusGrupo());
+        grupo.setQtdUsuarios(contarIntegrantes().getOrDefault(id, 0));
         grupoDAO.alterar(grupo);
     }
 

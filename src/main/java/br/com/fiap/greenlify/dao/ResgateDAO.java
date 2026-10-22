@@ -19,7 +19,10 @@ import java.util.List;
 
 /**
  * DAO responsável pela persistência da entidade Resgate, que representa
- * a concessão de uma recompensa a um usuário.
+ * a concessão de uma recompensa a um usuário (prêmio do ranking individual).
+ *
+ * <p>Não tem relação com os Selos Verdes (tabela Usuario_Selo): resgates de prêmio não entram na
+ * pontuação do ranking de grupos. Falhas de escrita lançam {@link IllegalStateException}.</p>
  */
 public class ResgateDAO {
 
@@ -46,6 +49,7 @@ public class ResgateDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível gravar o resgate.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -80,6 +84,7 @@ public class ResgateDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível gravar o resgate.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -110,6 +115,7 @@ public class ResgateDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível gravar o resgate.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -205,6 +211,31 @@ public class ResgateDAO {
         }
     }
 
+    /**
+     * Informa se já existe OUTRO resgate do usuário na data (usuário + data identifica o prêmio de
+     * um ranking). Usado ao cadastrar/alterar à mão, para não duplicar o prêmio.
+     *
+     * @param ignorarIdResgate resgate a desconsiderar (o que está sendo alterado); use 0 para nenhum
+     * @throws IllegalStateException se o banco falhar (na dúvida, não se libera o cadastro)
+     */
+    public boolean existePorUsuarioEData(int idUsuario, LocalDate data, int ignorarIdResgate) {
+        String sql = "SELECT COUNT(*) FROM Resgate WHERE id_usuario = ? AND dt_concessao = ? AND id_resgate <> ?";
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, idUsuario);
+            ps.setDate(2, Date.valueOf(data));
+            ps.setInt(3, ignorarIdResgate);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new IllegalStateException("Não foi possível verificar o resgate do usuário.", e);
+        }
+    }
+
     private boolean existe(Connection con, int idUsuario, LocalDate data) throws SQLException {
         String sql = "SELECT COUNT(*) FROM Resgate WHERE id_usuario = ? AND dt_concessao = ?";
         try (PreparedStatement ps = con.prepareStatement(sql)) {
@@ -217,12 +248,13 @@ public class ResgateDAO {
     }
 
     /**
-     * Concede o bônus percentual sobre o saldo da carteira e registra o resgate
-     * na MESMA transação: ou grava os dois ou nenhum.
+     * Concede o bônus da recompensa do resgate (percentual do saldo mais pontos fixos, ver
+     * {@link Recompensa#calcularBonus(long)}) à carteira e registra o resgate na MESMA transação:
+     * ou grava os dois ou nenhum. Repetir não concede de novo (JA_CONCEDIDA).
      *
      * @return CONCEDIDA, JA_CONCEDIDA (já havia resgate na data) ou NAO_CONCEDIDA (sem carteira ou erro)
      */
-    public PosicaoRanking.Resultado concederBonus(Resgate resgate, int percentual) {
+    public PosicaoRanking.Resultado concederBonus(Resgate resgate) {
         return executarEmTransacao(resgate, con -> {
             long saldo;
             String sqlSaldo = "SELECT nr_saldo_pontos FROM Carteira WHERE id_usuario = ? FOR UPDATE";
@@ -236,7 +268,7 @@ public class ResgateDAO {
                 }
             }
 
-            long novoSaldo = saldo + (saldo * percentual) / 100;
+            long novoSaldo = saldo + resgate.getRecompensa().calcularBonus(saldo);
             String sqlCarteira = "UPDATE Carteira SET nr_saldo_pontos = ?, vl_pontos_convertidos = ? "
                     + "WHERE id_usuario = ?";
             try (PreparedStatement ps = con.prepareStatement(sqlCarteira)) {
@@ -253,12 +285,35 @@ public class ResgateDAO {
 
     /**
      * Quita a conta de luz (pagamento integral) e registra o resgate na MESMA
-     * transação. A carteira não é tocada.
+     * transação. A carteira não é tocada. Dentro da transação a conta é travada e o valor
+     * restante é conferido de novo: se outro pagamento já reduziu a dívida, o prêmio não é
+     * concedido (nada é pago a mais) e pode ser repetido depois com o valor atualizado.
      *
-     * @return CONCEDIDA, JA_CONCEDIDA ou NAO_CONCEDIDA (erro de banco)
+     * @return CONCEDIDA, JA_CONCEDIDA ou NAO_CONCEDIDA (conta já paga em parte/inexistente ou erro de banco)
      */
     public PosicaoRanking.Resultado concederPagamentoConta(Resgate resgate, PagamentoConta pagamento) {
         return executarEmTransacao(resgate, con -> {
+            int idConta = pagamento.getContaLuz().getIdContaLuz();
+            try (PreparedStatement ps = con.prepareStatement(
+                    "SELECT id_conta_luz FROM Conta_Luz WHERE id_conta_luz = ? FOR UPDATE")) {
+                ps.setInt(1, idConta);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        return PosicaoRanking.Resultado.NAO_CONCEDIDA;
+                    }
+                }
+            }
+            String sqlRestante = "SELECT c.vl_conta - NVL((SELECT SUM(p.vl_pago) FROM Pagamento_Conta p "
+                    + "WHERE p.id_conta_luz = c.id_conta_luz), 0) FROM Conta_Luz c WHERE c.id_conta_luz = ?";
+            try (PreparedStatement ps = con.prepareStatement(sqlRestante)) {
+                ps.setInt(1, idConta);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next() || rs.getDouble(1) + 0.005 < pagamento.getValorPago()) {
+                        return PosicaoRanking.Resultado.NAO_CONCEDIDA;
+                    }
+                }
+            }
+
             new PagamentoContaDAO().cadastrar(con, pagamento);
             inserir(con, resgate);
             return PosicaoRanking.Resultado.CONCEDIDA;

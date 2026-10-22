@@ -1,9 +1,7 @@
 package br.com.fiap.greenlify.service;
 
-import br.com.fiap.greenlify.dao.AdminDAO;
 import br.com.fiap.greenlify.dao.PosicaoRankingDAO;
 import br.com.fiap.greenlify.dao.RankingDAO;
-import br.com.fiap.greenlify.dao.UsuarioComumDAO;
 import br.com.fiap.greenlify.dto.RankingRequestDTO;
 import br.com.fiap.greenlify.dto.RankingResponseDTO;
 import br.com.fiap.greenlify.mapper.RankingMapper;
@@ -11,20 +9,32 @@ import br.com.fiap.greenlify.enums.StatusRankingEnum;
 import br.com.fiap.greenlify.enums.TipoRankingEnum;
 import br.com.fiap.greenlify.models.PosicaoRanking;
 import br.com.fiap.greenlify.models.Ranking;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Ciclo dos rankings mensais, em três etapas separadas, todas de iniciativa do administrador:
+ * <ol>
+ *   <li><b>criar</b> o ranking ({@link #cadastrar}, {@link #criarRankingsDoMes()});</li>
+ *   <li><b>atualizar</b> as posições dos rankings abertos ({@link #atualizarRankings()});</li>
+ *   <li><b>fechar</b> de forma definitiva, depois do fim do período, e conceder as recompensas
+ *       ({@link #fecharRanking(int)}).</li>
+ * </ol>
+ * Nenhuma etapa dispara a outra, e nenhuma conclusão de missão mexe nos rankings mensais. O ranking
+ * all time (Redis) é outra coisa: ver {@link RankingAllTimeService}.
+ */
 @Service
 public class RankingService {
     private final RankingDAO rankingDAO;
     private final PosicaoRankingDAO posicaoDAO;
 
     /**
-     * Trava única (vale para todas as instâncias do serviço) para quem regrava as posições do
-     * ranking do mês: evita que duas atualizações simultâneas dupliquem as posições.
+     * Trava única (vale para todas as instâncias do serviço) para quem cria, atualiza e fecha
+     * rankings: evita que duas operações simultâneas dupliquem posições ou prêmios. Entre
+     * servidores diferentes quem garante é o banco (linha do ranking travada e prêmio único por
+     * usuário + data final).
      */
     private static final Object TRAVA_POSICOES = new Object();
 
@@ -33,181 +43,140 @@ public class RankingService {
         this.posicaoDAO = new PosicaoRankingDAO();
     }
 
+    // ------------------------------------------------------------------
+    // 1) Criação
+    // ------------------------------------------------------------------
+
     /**
-     * Recalcula os rankings (individual e de grupos) do mês atual: fecha os
-     * períodos que já terminaram, cria o ranking do mês se ainda não existir e
-     * regrava as posições usando as regras do model {@link Ranking}
-     * (individual: missões concluídas no mês e, no empate, cadastro mais antigo;
-     * grupos: total de selos dos integrantes) e reconstrói o ranking all time no Redis.
+     * Cria os rankings do mês atual (individual e de grupos) que ainda não existirem. Só cria:
+     * não calcula posições e não fecha nada. Repetir não duplica (um período que já cruza o mês
+     * é respeitado).
      *
-     * @throws IllegalStateException se o banco não confirmar a criação do ranking
+     * @return quantos rankings foram criados agora (0 a 2)
+     * @throws IllegalStateException se o banco não confirmar a criação
+     */
+    public int criarRankingsDoMes() {
+        synchronized (TRAVA_POSICOES) {
+            LocalDate hoje = LocalDate.now();
+            LocalDate inicio = hoje.withDayOfMonth(1);
+            LocalDate fim = hoje.withDayOfMonth(hoje.lengthOfMonth());
+
+            int criados = 0;
+            for (TipoRankingEnum tipo : TipoRankingEnum.values()) {
+                if (rankingDAO.existeSobreposicao(tipo, inicio, fim, 0)) {
+                    continue;
+                }
+                Ranking novo = new Ranking();
+                novo.setTipo(tipo);
+                novo.setDataInicio(inicio);
+                novo.setDataFim(fim);
+                novo.setStatus(StatusRankingEnum.ABERTO);
+                rankingDAO.cadastrar(novo);
+                if (novo.getIdRanking() <= 0) {
+                    throw new IllegalStateException("Não foi possível criar o ranking do mês.");
+                }
+                criados++;
+            }
+            return criados;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // 2) Atualização das posições
+    // ------------------------------------------------------------------
+
+    /**
+     * Recalcula e regrava as posições de todos os rankings ABERTOS, com as regras do model
+     * {@link Ranking} (individual: missões contínuas concluídas no período e, no empate, cadastro
+     * mais antigo; grupal: Selos Verdes resgatados pelos integrantes). Só atualiza: não cria
+     * rankings, não fecha nenhum e não concede recompensas. Rankings fechados são histórico e não
+     * são tocados.
+     *
+     * @throws IllegalStateException se o banco falhar (as posições anteriores são mantidas)
      */
     public void atualizarRankings() {
         synchronized (TRAVA_POSICOES) {
-            atualizarRankingsSemTrava();
+            for (Ranking ranking : rankingDAO.listar()) {
+                if (ranking.aceitaAtualizacao()) {
+                    posicaoDAO.substituirPorRanking(ranking.getIdRanking(), ranking.calcularPosicoes());
+                }
+            }
         }
     }
 
+    // ------------------------------------------------------------------
+    // 3) Fechamento definitivo e recompensas
+    // ------------------------------------------------------------------
+
     /**
-     * Atualiza só o ranking individual do mês corrente (cria o ranking do mês se ainda não
-     * existir) e regrava as posições. É chamado a cada missão concluída, para o ranking
-     * mensal acompanhar as conclusões sem esperar a atualização manual do administrador.
+     * Resumo do fechamento: prêmios concedidos agora, já concedidos antes e não concedidos;
+     * {@code fechadoAgora} diz se esta chamada foi a que encerrou o ranking.
      */
-    public void atualizarRankingMensalIndividual() {
-        synchronized (TRAVA_POSICOES) {
-            LocalDate hoje = LocalDate.now();
-            Ranking atual = null;
-            for (Ranking r : rankingDAO.listar()) {
-                if (r.getTipo() == TipoRankingEnum.INDIVIDUAL && r.getStatus() == StatusRankingEnum.ABERTO
-                        && r.getDataInicio() != null && r.getDataFim() != null
-                        && !hoje.isBefore(r.getDataInicio()) && !hoje.isAfter(r.getDataFim())) {
-                    atual = r;
-                    break;
-                }
-            }
-
-            if (atual == null) {
-                atual = new Ranking();
-                atual.setTipo(TipoRankingEnum.INDIVIDUAL);
-                atual.setDataInicio(hoje.withDayOfMonth(1));
-                atual.setDataFim(hoje.withDayOfMonth(hoje.lengthOfMonth()));
-                atual.setStatus(StatusRankingEnum.ABERTO);
-                rankingDAO.cadastrar(atual);
-                if (atual.getIdRanking() <= 0) {
-                    throw new IllegalStateException("Não foi possível criar o ranking do mês.");
-                }
-            }
-
-            posicaoDAO.excluirPorRanking(atual.getIdRanking());
-            for (PosicaoRanking posicao : atual.calcularRankingUsuarios()) {
-                posicaoDAO.cadastrar(posicao);
-            }
-        }
-    }
-
-    private void atualizarRankingsSemTrava() {
-        LocalDate hoje = LocalDate.now();
-        List<Ranking> todos = rankingDAO.listar();
-
-        for (Ranking r : todos) {
-            if (r.getStatus() == StatusRankingEnum.ABERTO && r.getDataFim() != null
-                    && r.getDataFim().isBefore(hoje)) {
-                r.setStatus(StatusRankingEnum.FECHADO);
-                rankingDAO.alterar(r);
-            }
-        }
-
-        for (TipoRankingEnum tipo : TipoRankingEnum.values()) {
-            Ranking atual = null;
-            for (Ranking r : todos) {
-                if (r.getTipo() == tipo && r.getStatus() == StatusRankingEnum.ABERTO
-                        && r.getDataInicio() != null && r.getDataFim() != null
-                        && !hoje.isBefore(r.getDataInicio()) && !hoje.isAfter(r.getDataFim())) {
-                    atual = r;
-                    break;
-                }
-            }
-
-            if (atual == null) {
-                atual = new Ranking();
-                atual.setTipo(tipo);
-                atual.setDataInicio(hoje.withDayOfMonth(1));
-                atual.setDataFim(hoje.withDayOfMonth(hoje.lengthOfMonth()));
-                atual.setStatus(StatusRankingEnum.ABERTO);
-                rankingDAO.cadastrar(atual);
-                if (atual.getIdRanking() <= 0) {
-                    throw new IllegalStateException("Não foi possível criar o ranking do mês.");
-                }
-            }
-
-            List<PosicaoRanking> posicoes = (tipo == TipoRankingEnum.INDIVIDUAL)
-                    ? atual.calcularRankingUsuarios()
-                    : atual.calcularRankingGrupos();
-
-            posicaoDAO.excluirPorRanking(atual.getIdRanking());
-            for (PosicaoRanking posicao : posicoes) {
-                posicaoDAO.cadastrar(posicao);
-            }
-        }
-
-        new RankingAllTimeService().reconstruir();
-    }
-
-    /** Resumo do fechamento: quantos prêmios foram concedidos, já existiam ou falharam. */
-    public record ResultadoFechamento(int concedidas, int jaConcedidas, int naoConcedidas) {
+    public record ResultadoFechamento(int concedidas, int jaConcedidas, int naoConcedidas, boolean fechadoAgora) {
     }
 
     /**
-     * Fecha manualmente um ranking individual já encerrado e concede as recompensas
-     * das posições elegíveis (quem concluiu ao menos uma missão no período).
-     * <p>
-     * As posições são recalculadas para o resultado final e cada prêmio é concedido por
-     * {@link PosicaoRanking#concederRecompensa(br.com.fiap.greenlify.models.UsuarioComum)},
-     * que grava prêmio e resgate na mesma transação e nunca repete o prêmio do mesmo
-     * usuário no mesmo ranking. Por isso o fechamento pode ser repetido com segurança
-     * (ex.: se algum prêmio falhou, como 1º lugar sem conta de luz pendente).
+     * Fecha definitivamente um ranking já encerrado (nunca um vigente) e, no individual, concede as
+     * recompensas das posições elegíveis (quem concluiu ao menos uma missão no período).
+     *
+     * <p>Passos, nesta ordem: (1) se o ranking ainda está ABERTO, as posições finais são calculadas
+     * e gravadas; se já está FECHADO, as posições gravadas são mantidas (histórico) e só os prêmios
+     * pendentes são reaplicados; (2) cada prêmio é concedido por
+     * {@link PosicaoRanking#concederRecompensa}, que grava prêmio e resgate na mesma transação e
+     * nunca repete o prêmio do mesmo usuário no mesmo ranking; (3) só no fim o ranking passa a
+     * FECHADO, por troca atômica de status. Se algum passo lançar erro, o ranking continua ABERTO e
+     * a operação pode ser repetida sem duplicar nada. Prêmios não concedidos (ex.: 1º lugar sem
+     * conta de luz pendente) aparecem no resumo e podem ser reaplicados repetindo o fechamento.</p>
      *
      * @param idRanking identificador do ranking a fechar
      * @return o resumo dos prêmios
-     * @throws IllegalArgumentException ranking inexistente, que não é individual ou que ainda não terminou
+     * @throws IllegalArgumentException ranking inexistente ou que ainda não terminou
+     * @throws IllegalStateException    se o banco falhar (o ranking não é fechado)
      */
     public ResultadoFechamento fecharRanking(int idRanking) {
         Ranking ranking = rankingDAO.buscarPorId(idRanking);
         if (ranking == null) {
             throw new IllegalArgumentException("Ranking não encontrado");
         }
-        if (ranking.getTipo() != TipoRankingEnum.INDIVIDUAL) {
-            throw new IllegalArgumentException("Só o ranking individual concede recompensas.");
-        }
-        if (ranking.getDataFim() == null || !LocalDate.now().isAfter(ranking.getDataFim())) {
-            throw new IllegalArgumentException("O ranking ainda não terminou.");
+        if (!ranking.terminou(LocalDate.now())) {
+            throw new IllegalArgumentException("O ranking ainda não terminou: só se fecha ranking encerrado.");
         }
 
-        List<PosicaoRanking> posicoes = ranking.calcularRankingUsuarios();
-        posicaoDAO.excluirPorRanking(idRanking);
-        for (PosicaoRanking posicao : posicoes) {
-            posicaoDAO.cadastrar(posicao);
-        }
+        synchronized (TRAVA_POSICOES) {
+            boolean aberto = ranking.aceitaAtualizacao();
 
-        int concedidas = 0;
-        int jaConcedidas = 0;
-        int naoConcedidas = 0;
-        for (PosicaoRanking posicao : posicoes) {
-            if (posicao.getMissoesRealizadas() <= 0) {
-                continue;
+            List<PosicaoRanking> posicoes;
+            if (aberto) {
+                posicoes = ranking.calcularPosicoes();
+                posicaoDAO.substituirPorRanking(idRanking, posicoes);
+            } else {
+                posicoes = posicaoDAO.listarPorRanking(idRanking);
             }
-            switch (posicao.concederRecompensa(posicao.getUsuario())) {
-                case CONCEDIDA -> concedidas++;
-                case JA_CONCEDIDA -> jaConcedidas++;
-                default -> naoConcedidas++;
-            }
-        }
 
-        if (ranking.getStatus() != StatusRankingEnum.FECHADO) {
-            ranking.setStatus(StatusRankingEnum.FECHADO);
-            rankingDAO.alterar(ranking);
+            int concedidas = 0;
+            int jaConcedidas = 0;
+            int naoConcedidas = 0;
+            if (ranking.getTipo() == TipoRankingEnum.INDIVIDUAL) {
+                for (PosicaoRanking posicao : posicoes) {
+                    if (posicao.getPontuacao() <= 0 || posicao.getUsuario() == null) {
+                        continue;
+                    }
+                    switch (posicao.concederRecompensa(posicao.getUsuario())) {
+                        case CONCEDIDA -> concedidas++;
+                        case JA_CONCEDIDA -> jaConcedidas++;
+                        default -> naoConcedidas++;
+                    }
+                }
+            }
+
+            boolean fechadoAgora = aberto && rankingDAO.fechar(idRanking);
+            return new ResultadoFechamento(concedidas, jaConcedidas, naoConcedidas, fechadoAgora);
         }
-        return new ResultadoFechamento(concedidas, jaConcedidas, naoConcedidas);
     }
 
-    /**
-     * Confere se as credenciais são de um administrador (as mesmas do login).
-     *
-     * @throws IllegalArgumentException credenciais ausentes ou inválidas (401)
-     * @throws SecurityException        usuário que não é administrador (403)
-     */
-    public void exigirAdministrador(String email, String senha) {
-        if (email == null || email.isBlank() || senha == null || senha.isBlank()) {
-            throw new IllegalArgumentException("Credenciais de administrador não informadas.");
-        }
-        if (new AdminDAO().buscarPorEmailESenha(email, senha) != null) {
-            return;
-        }
-        if (new UsuarioComumDAO().buscarPorEmailESenha(email, senha) != null) {
-            throw new SecurityException("Acesso restrito ao administrador.");
-        }
-        throw new IllegalArgumentException("Credenciais inválidas.");
-    }
+    // ------------------------------------------------------------------
+    // Consulta e cadastro manual
+    // ------------------------------------------------------------------
 
     public RankingResponseDTO buscarPorId(int id) {
         Ranking ranking = rankingDAO.buscarPorId(id);
@@ -224,25 +193,49 @@ public class RankingService {
                 .toList();
     }
 
+    /** Cria um ranking ABERTO com o período informado, sem cruzar outro do mesmo tipo. */
     public void cadastrar(RankingRequestDTO dto) {
         validar(dto);
+        if (dto.status() != StatusRankingEnum.ABERTO) {
+            throw new IllegalArgumentException("Um ranking novo começa ABERTO: o fechamento é uma etapa própria.");
+        }
+        if (rankingDAO.existeSobreposicao(dto.tipo(), dto.dataInicio(), dto.dataFim(), 0)) {
+            throw new IllegalArgumentException("Já existe um ranking desse tipo cujo período cruza o informado.");
+        }
         rankingDAO.cadastrar(RankingMapper.dtoToEntity(dto));
     }
 
+    /** Ranking encerrado é histórico: não se exclui (posições e prêmios ficam preservados). */
     public void excluir(int id) {
         Ranking ranking = rankingDAO.buscarPorId(id);
         if (ranking == null) {
             throw new IllegalArgumentException("Ranking não encontrado");
         }
+        if (ranking.getStatus() == StatusRankingEnum.FECHADO) {
+            throw new IllegalArgumentException("Ranking encerrado não pode ser excluído: o histórico é preservado.");
+        }
         rankingDAO.excluir(id);
     }
 
+    /**
+     * Altera o período de um ranking ABERTO. Ranking encerrado não muda, e o status não é alterado
+     * por aqui: fechar é a etapa {@link #fecharRanking(int)}.
+     */
     public void alterar(RankingRequestDTO dto, int id) {
         Ranking existente = rankingDAO.buscarPorId(id);
         if (existente == null) {
             throw new IllegalArgumentException("Ranking não encontrado");
         }
+        if (existente.getStatus() == StatusRankingEnum.FECHADO) {
+            throw new IllegalArgumentException("Ranking encerrado não pode ser alterado: o histórico é preservado.");
+        }
         validar(dto);
+        if (dto.status() != StatusRankingEnum.ABERTO) {
+            throw new IllegalArgumentException("O fechamento é uma etapa própria: use o fechamento do ranking.");
+        }
+        if (rankingDAO.existeSobreposicao(dto.tipo(), dto.dataInicio(), dto.dataFim(), id)) {
+            throw new IllegalArgumentException("Já existe um ranking desse tipo cujo período cruza o informado.");
+        }
 
         Ranking ranking = RankingMapper.dtoToEntity(dto);
         ranking.setIdRanking(id);

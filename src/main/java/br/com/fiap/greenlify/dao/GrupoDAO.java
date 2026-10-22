@@ -8,11 +8,18 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Classe de acesso a dados (DAO) responsável pelas operações de
  * persistência de {@link Grupo} na tabela {@code Grupo}.
+ *
+ * <p>A coluna {@code nr_usuarios} não é fonte confiável do tamanho do grupo (ninguém a atualiza ao
+ * entrar/sair): o número de integrantes vem de {@link #contarIntegrantes()}, a partir de
+ * {@code Usuario.id_grupo}. Integrantes não se confundem com selos resgatados, que formam a
+ * pontuação do ranking de grupos.</p>
  */
 public class GrupoDAO {
     /**
@@ -92,32 +99,70 @@ public class GrupoDAO {
     }
 
     /**
-     * Remove um grupo do banco de dados.
+     * Remove um grupo do banco de dados. Na mesma transação, os integrantes ficam sem grupo
+     * (id_grupo nulo: deixam de somar selos para ele) e as posições do grupo nos rankings são
+     * apagadas; sem isso as chaves estrangeiras impediam a exclusão. Ou sai tudo, ou nada.
      *
      * @param idGrupo identificador do grupo a ser removido
+     * @throws IllegalStateException se o banco falhar (nada é alterado)
      */
     public void excluir(int idGrupo) {
-        Connection conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
+        String[] comandos = {
+                "UPDATE Usuario SET id_grupo = NULL WHERE id_grupo = ?",
+                "DELETE FROM Posicao_Ranking WHERE id_grupo = ?",
+                "DELETE FROM Grupo WHERE id_grupo = ?"
+        };
 
-        try {
-            ps = conexao.prepareStatement("DELETE FROM Grupo WHERE id_grupo = ?");
-            ps.setInt(1, idGrupo);
+        try (Connection conexao = ConnectionFactory.obterConexao()) {
+            boolean confirmado = false;
+            try {
+                conexao.setAutoCommit(false);
+                for (String sql : comandos) {
+                    try (PreparedStatement ps = conexao.prepareStatement(sql)) {
+                        ps.setInt(1, idGrupo);
+                        ps.executeUpdate();
+                    }
+                }
+                conexao.commit();
+                confirmado = true;
+            } finally {
+                // Desfaz antes de devolver a conexão: no Oracle, ligar o autocommit com a
+                // transação aberta confirmaria tudo.
+                if (!confirmado) {
+                    conexao.rollback();
+                }
+                conexao.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new IllegalStateException("Não foi possível excluir o grupo.", e);
+        }
+    }
 
-            ps.executeUpdate();
-            ps.close();
+    /**
+     * Conta os integrantes de cada grupo (usuários comuns com {@code id_grupo}), em uma consulta.
+     * É o tamanho do grupo; não tem relação com a quantidade de selos resgatados.
+     *
+     * @return mapa idGrupo -> integrantes (grupos vazios não aparecem)
+     */
+    public Map<Integer, Integer> contarIntegrantes() {
+        String sql = "SELECT id_grupo, COUNT(*) AS total FROM Usuario "
+                + "WHERE nr_nivel_acesso = 0 AND id_grupo IS NOT NULL GROUP BY id_grupo";
+        Map<Integer, Integer> total = new HashMap<>();
+
+        try (Connection conexao = ConnectionFactory.obterConexao();
+             PreparedStatement ps = conexao.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                total.put(rs.getInt("id_grupo"), rs.getInt("total"));
+            }
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            throw new IllegalStateException("Não foi possível contar os integrantes dos grupos.", e);
         }
+        return total;
     }
 
     /**
@@ -140,7 +185,9 @@ public class GrupoDAO {
                 grupo = new Grupo();
                 grupo.setIdGrupo(rs.getInt(1));
                 grupo.setNome(rs.getString(2));
-                grupo.setDataCriacao(rs.getDate(3).toLocalDate());
+                if (rs.getDate(3) != null) {
+                    grupo.setDataCriacao(rs.getDate(3).toLocalDate());
+                }
                 grupo.setQtdUsuarios(rs.getInt(4));
                 grupo.setStatusGrupo(rs.getInt(5));
             }
@@ -180,7 +227,9 @@ public class GrupoDAO {
                 Grupo grupo = new Grupo();
                 grupo.setIdGrupo(rs.getInt(1));
                 grupo.setNome(rs.getString(2));
-                grupo.setDataCriacao(rs.getDate(3).toLocalDate());
+                if (rs.getDate(3) != null) {
+                    grupo.setDataCriacao(rs.getDate(3).toLocalDate());
+                }
                 grupo.setQtdUsuarios(rs.getInt(4));
                 grupo.setStatusGrupo(rs.getInt(5));
 

@@ -14,6 +14,9 @@ import java.util.List;
 /**
  * Classe de acesso a dados (DAO) responsável pelas operações de
  * persistência de {@link Fingerprint} na tabela {@code Fingerprint}.
+ *
+ * <p>Falhas de escrita e de consulta de duplicidade lançam {@link IllegalStateException}: nunca se
+ * trata uma falha de banco como "não há duplicidade".</p>
  */
 public class FingerprintDAO {
 
@@ -39,6 +42,7 @@ public class FingerprintDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível gravar a fingerprint.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -71,6 +75,7 @@ public class FingerprintDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível alterar a fingerprint.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -99,6 +104,7 @@ public class FingerprintDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível excluir a fingerprint.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -221,6 +227,52 @@ public class FingerprintDAO {
                     fingerprint.setIdFingerprint(rs.getInt(1));
                 }
             }
+        }
+    }
+
+    /**
+     * Procura uma fingerprint com exatamente o mesmo hash de vídeo (sem diferenciar maiúsculas).
+     *
+     * @return o id do upload dono da fingerprint mais antiga com esse hash, ou 0 se não houver
+     * @throws IllegalStateException se o banco falhar
+     */
+    public int buscarIdUploadPorHash(String hashVideo) {
+        try (Connection conexao = ConnectionFactory.obterConexao()) {
+            return buscarIdUploadPorHash(conexao, hashVideo);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new IllegalStateException("Não foi possível verificar a duplicidade do vídeo.", e);
+        }
+    }
+
+    /** Mesma busca de {@link #buscarIdUploadPorHash(String)}, na conexão (transação) recebida. */
+    public int buscarIdUploadPorHash(Connection conexao, String hashVideo) throws SQLException {
+        String sql = "SELECT id_upload FROM (SELECT id_upload FROM Fingerprint "
+                + "WHERE LOWER(ds_hash_video) = LOWER(?) ORDER BY id_fingerprint) WHERE ROWNUM = 1";
+        try (PreparedStatement ps = conexao.prepareStatement(sql)) {
+            ps.setString(1, hashVideo == null ? "" : hashVideo.trim());
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    /**
+     * Informa se o upload já tem fingerprint (um vídeo tem uma só).
+     *
+     * @throws IllegalStateException se o banco falhar
+     */
+    public boolean existePorUpload(int idUpload) {
+        String sql = "SELECT COUNT(*) FROM Fingerprint WHERE id_upload = ?";
+        try (Connection conexao = ConnectionFactory.obterConexao();
+             PreparedStatement ps = conexao.prepareStatement(sql)) {
+            ps.setInt(1, idUpload);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new IllegalStateException("Não foi possível verificar a fingerprint do upload.", e);
         }
     }
 }

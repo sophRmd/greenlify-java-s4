@@ -6,21 +6,29 @@ import br.com.fiap.greenlify.dao.UsuarioMissaoDAO;
 import br.com.fiap.greenlify.dto.RankingAllTimeResponseDTO;
 import br.com.fiap.greenlify.mapper.UsuarioResumoMapper;
 import br.com.fiap.greenlify.models.UsuarioComum;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Ranking all time: cada usuário vale o total de missões que já concluiu
- * (não depende da carteira, então pagar uma conta não faz ninguém cair).
+ * Ranking all time: cada usuário vale a pontuação elegível das missões contínuas que concluiu
+ * (regra única de {@code Pontuacao.pontosElegiveis}; missão mensal não soma). Não depende da
+ * carteira, então pagar uma conta não faz ninguém cair.
  *
- * <p>Não é gravado em Ranking/Posicao_Ranking nem recalculado pelo agendamento
- * do {@link RankingService}: ele não tem período e deve ser atualizado a cada
- * missão concluída. Por isso existem os dois pontos de troca para o Redis
- * sorted set, marcados com TODO.</p>
+ * <p>O Oracle é a fonte da verdade e o Redis (Sorted Set {@value RankingRedisDAO#CHAVE}) é só uma
+ * projeção rápida dela: o Redis responde a consulta; se estiver fora do ar ou vazio, o Oracle
+ * responde. A conclusão incrementa o Redis uma única vez por evento, e a {@link #reconciliar()}
+ * recalcula os totais no Oracle e corrige qualquer divergência (incremento perdido, Redis
+ * reiniciado).</p>
+ *
+ * <p>Não cria, atualiza nem fecha rankings mensais: isso é ação do administrador
+ * ({@link RankingService}).</p>
  */
 @Service
 public class RankingAllTimeService {
@@ -35,16 +43,19 @@ public class RankingAllTimeService {
     }
 
     /**
-     * Lista o ranking all time, do usuário com mais missões concluídas para o
-     * com menos (empate: o cadastro mais antigo vem primeiro).
+     * Lista o ranking all time, do usuário com mais pontos elegíveis para o com menos
+     * (empate: o cadastro mais antigo vem primeiro).
      */
     public List<RankingAllTimeResponseDTO> listar() {
-        // Redis (ZREVRANGE WITHSCORES); se estiver fora do ar ou vazio, usa o Oracle e popula o Redis.
         Map<Integer, Integer> totais = redisDAO.listar();
-        if (totais == null || totais.isEmpty()) {
-            totais = usuarioMissaoDAO.contarConcluidasPorUsuario();
-            if (totais.isEmpty() == false) {
-                redisDAO.reconstruir(totais);
+        if (totais == null) {
+            // Redis fora do ar: o Oracle responde.
+            totais = usuarioMissaoDAO.somarPontosElegiveisPorUsuario();
+        } else if (totais.isEmpty()) {
+            // Redis vazio: o Oracle responde e o Redis é corrigido sem ser apagado.
+            totais = usuarioMissaoDAO.somarPontosElegiveisPorUsuario();
+            if (!totais.isEmpty()) {
+                redisDAO.reconciliar(totais);
             }
         }
         final Map<Integer, Integer> pontos = totais;
@@ -69,24 +80,45 @@ public class RankingAllTimeService {
         return ranking;
     }
 
-    /** Reconstrói o Sorted Set a partir do Oracle (usado ao atualizar os rankings). */
-    public void reconstruir() {
-        redisDAO.reconstruir(usuarioMissaoDAO.contarConcluidasPorUsuario());
+    /**
+     * Chamado depois que a conclusão de uma missão contínua já foi gravada no Oracle: soma no
+     * Sorted Set a pontuação elegível do usuário. Uma falha do Redis só é registrada (a conclusão
+     * não é desfeita) e a reconciliação recupera o incremento. Repetir a chamada para a mesma
+     * conclusão (mesmo usuário, missão e mês) não soma de novo.
+     *
+     * @param pontos pontuação elegível do evento, calculada por {@code Pontuacao.pontosElegiveis}
+     */
+    public void registrarMissaoConcluida(int idUsuario, int idMissao, LocalDate dia, int pontos) {
+        String idEvento = idUsuario + ":" + idMissao + ":" + YearMonth.from(dia);
+        try {
+            if (redisDAO.incrementar(idUsuario, idEvento, dia, pontos)
+                    == RankingRedisDAO.Resultado.REDIS_INDISPONIVEL) {
+                System.err.println("Redis fora do ar: o incremento do usuário " + idUsuario
+                        + " será recuperado na próxima reconciliação.");
+            }
+        } catch (RuntimeException e) {
+            System.err.println("Não foi possível atualizar o ranking all time: " + e.getMessage());
+        }
     }
 
     /**
-     * Chamado uma vez cada vez que um usuário conclui uma missão (conclusão já validada e
-     * gravada): soma no ranking geral (all time) e atualiza o ranking individual do mês.
-     * Os rankings são derivados do que já está no banco, então uma falha aqui não desfaz a
-     * conclusão: é só registrada, e a próxima atualização dos rankings corrige tudo.
+     * Recalcula os totais a partir do Oracle e corrige o Redis membro a membro (sem apagar a chave).
+     *
+     * @return o resumo da correção, ou {@code null} se o Redis estiver fora do ar
+     * @throws IllegalStateException se o Oracle falhar (nada é alterado no Redis)
      */
-    public void registrarMissaoConcluida(int idUsuario) {
-        redisDAO.incrementar(idUsuario); // ZINCRBY ranking:all-time 1 {idUsuario}
+    public RankingRedisDAO.Reconciliacao reconciliar() {
+        return redisDAO.reconciliar(usuarioMissaoDAO.somarPontosElegiveisPorUsuario());
+    }
 
+    /** Reconciliação periódica; o intervalo pode ser ajustado em ranking.all-time.reconciliacao-ms. */
+    @Scheduled(fixedDelayString = "${ranking.all-time.reconciliacao-ms:600000}",
+            initialDelayString = "${ranking.all-time.reconciliacao-inicial-ms:60000}")
+    public void reconciliarAgendado() {
         try {
-            new RankingService().atualizarRankingMensalIndividual();
+            reconciliar();
         } catch (RuntimeException e) {
-            System.err.println("Não foi possível atualizar o ranking do mês: " + e.getMessage());
+            System.err.println("Não foi possível reconciliar o ranking all time: " + e.getMessage());
         }
     }
 }

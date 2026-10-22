@@ -13,6 +13,7 @@ import java.util.List;
 /**
  * DAO da entidade FingerprintFrame (tabela Fingerprint_Frame). Cada frame
  * pertence a uma Fingerprint, referenciada pela coluna id_fingerprint.
+ * Falhas de escrita lançam {@link IllegalStateException}.
  */
 public class FingerprintFrameDAO {
 
@@ -50,6 +51,7 @@ public class FingerprintFrameDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível gravar o frame.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -87,6 +89,7 @@ public class FingerprintFrameDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível alterar o frame.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -115,6 +118,7 @@ public class FingerprintFrameDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível excluir o frame.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {

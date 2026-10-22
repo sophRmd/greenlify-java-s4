@@ -41,7 +41,7 @@ public class UploadDAO {
                     + "       mc.nr_limite_realizacoes AS mc_limite, mc.ds_tipo_metrica AS mc_metrica, "
                     + "       mc.vl_metrica AS mc_valor, p.id_pontuacao AS p_id, p.nr_pontuacao AS p_valor "
                     + "FROM Upload up "
-                    + "LEFT JOIN Usuario u ON u.id_usuario = up.id_usuario AND u.nr_nivel_acesso = 0 "
+                    + "LEFT JOIN Usuario u ON u.id_usuario = up.id_usuario "
                     + "LEFT JOIN Missao_Continua mc ON mc.id_missao = up.id_missao "
                     + "LEFT JOIN Missao m ON m.id_missao = mc.id_missao "
                     + "LEFT JOIN Pontuacao p ON p.id_pontuacao = mc.id_pontuacao ";
@@ -258,6 +258,13 @@ public class UploadDAO {
     }
 
     /**
+     * Resultado de {@link #registrarEnvio}: se o envio concluiu a missão no mês e quantos pontos foram
+     * creditados na carteira (os mesmos usados no ranking all time, lidos da missão já travada).
+     */
+    public record ResultadoEnvio(boolean concluiu, int pontos) {
+    }
+
+    /**
      * Grava o envio inteiro em UMA transação, com uma única conexão: upload, fingerprint,
      * frames, progresso do usuário na missão e, se o envio conclui a missão, o crédito dos
      * pontos na carteira e a data de conclusão. Se qualquer etapa falhar, nada é gravado.
@@ -276,16 +283,21 @@ public class UploadDAO {
      * @param fingerprint fingerprint do vídeo, ou {@code null} se o arquivo foi recusado
      * @param frames      frames da fingerprint (vazio se não houver fingerprint)
      * @param missao      missão contínua do envio (só o id é usado; as regras vêm do banco)
-     * @return {@code true} se este envio concluiu a missão no mês (pontos creditados)
-     * @throws IllegalArgumentException se o usuário não existe ou já atingiu o limite do mês
+     * @return se este envio concluiu a missão no mês e os pontos creditados
+     * @throws IllegalArgumentException se o usuário não existe, já atingiu o limite do mês, o upload não
+     *                                  tem status ou o vídeo (hash) já foi enviado antes
      * @throws IllegalStateException    se o banco falhar (nada foi gravado)
      */
-    public boolean registrarEnvio(Upload upload, Fingerprint fingerprint, List<FingerprintFrame> frames,
-                                  MissaoContinua missao) {
+    public ResultadoEnvio registrarEnvio(Upload upload, Fingerprint fingerprint, List<FingerprintFrame> frames,
+                                         MissaoContinua missao) {
+        // Só um upload com resultado de análise é gravado; o status decide se conta como realização.
+        if (upload.getStatus() == null) {
+            throw new IllegalArgumentException("O upload não tem status de análise.");
+        }
         int idUsuario = upload.getUsuario().getIdUsuario();
         int idMissao = missao.getIdMissao();
         LocalDate dia = upload.getDataEnvio();
-        boolean aprovado = upload.getStatus() == StatusUploadEnum.APROVADO;
+        boolean aprovado = MissaoContinua.realizacaoValida(upload.getStatus());
         UsuarioMissaoDAO usuarioMissaoDAO = new UsuarioMissaoDAO();
 
         try (Connection con = ConnectionFactory.obterConexao()) {
@@ -307,6 +319,13 @@ public class UploadDAO {
                 int aprovadosNoCiclo = contarAprovadosNoCiclo(con, idUsuario, idMissao, dia);
                 if (aprovadosNoCiclo >= regras.limite()) {
                     throw new IllegalArgumentException("O usuário já concluiu essa missão neste mês.");
+                }
+
+                // Mesmo vídeo nunca vale duas vezes: na transação (e não só na análise prévia), para
+                // que um envio concorrente com o mesmo hash não seja aprovado em duplicidade.
+                if (aprovado && fingerprint != null
+                        && new FingerprintDAO().buscarIdUploadPorHash(con, fingerprint.getHashVideo()) > 0) {
+                    throw new IllegalArgumentException("Este vídeo já foi enviado antes.");
                 }
 
                 inserir(con, upload);
@@ -340,14 +359,17 @@ public class UploadDAO {
                 }
 
                 boolean concluiu = aprovado && progresso >= regras.limite();
+                int pontos = 0;
                 if (concluiu) {
-                    new CarteiraDAO().creditarPontos(con, idUsuario, regras.pontos());
+                    // pontos pela regra única (Pontuacao.pontosElegiveis), não por conta própria
+                    pontos = regras.pontosElegiveis(upload.getStatus(), progresso);
+                    new CarteiraDAO().creditarPontos(con, idUsuario, pontos);
                     usuarioMissaoDAO.registrarConclusao(con, andamento.getIdUsuarioMissao(), dia);
                 }
 
                 con.commit();
                 confirmado = true;
-                return concluiu;
+                return new ResultadoEnvio(concluiu, pontos);
             } finally {
                 // Desfaz antes de devolver a conexão: no Oracle, ligar o autocommit com a
                 // transação aberta confirmaria tudo.
@@ -364,6 +386,13 @@ public class UploadDAO {
 
     /** Limite de realizações por mês e pontos da missão contínua, lidos dentro da transação. */
     private record RegrasContinua(int limite, int pontos) {
+
+        /** Pontos devidos por este envio, pela mesma regra de {@link Pontuacao#pontosElegiveis}. */
+        int pontosElegiveis(StatusUploadEnum status, int realizacoesValidas) {
+            Pontuacao pontuacao = new Pontuacao();
+            pontuacao.setValorBase(pontos);
+            return pontuacao.pontosElegiveis(TipoMissaoEnum.MISSAO_CONTINUA, status, realizacoesValidas >= limite);
+        }
     }
 
     /** Lê as regras atuais da missão contínua; {@code null} se a missão não é contínua. */

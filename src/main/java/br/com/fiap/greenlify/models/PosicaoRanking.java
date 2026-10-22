@@ -15,6 +15,9 @@ import java.util.List;
  */
 public class PosicaoRanking {
 
+    /** Maior id de recompensa usado nas faixas de premiação (ids 1 a 6). */
+    public static final int ID_ULTIMA_RECOMPENSA_FAIXA = 6;
+
     private int idPosicao;
     private int posicao;
     private int pontuacao;
@@ -30,7 +33,7 @@ public class PosicaoRanking {
         CONCEDIDA,
         /** O usuário já tinha recebido o prêmio deste ranking (nada foi feito). */
         JA_CONCEDIDA,
-        /** Não foi possível conceder (ex.: 1º lugar sem conta de luz cadastrada, falha no banco). */
+        /** Não foi possível conceder (ex.: 1º lugar sem conta de luz pendente, falha no banco); pode ser repetido depois. */
         NAO_CONCEDIDA
     }
 
@@ -43,12 +46,13 @@ public class PosicaoRanking {
      * <ul>
      *   <li>1º lugar: pagamento INTEGRAL da conta de luz que o usuário cadastrou
      *       (sem crédito nem débito na carteira);</li>
-     *   <li>2º e 3º lugares: bônus percentual (da recompensa 2 e 3) sobre o saldo
-     *       de pontos da carteira;</li>
+     *   <li>2º e 3º lugares: bônus da recompensa 2 e 3 sobre o saldo de pontos da carteira;</li>
      *   <li>4º ao 10º: recompensa 4; 11º ao 20º: recompensa 5; demais: recompensa 6,
-     *       todas como bônus percentual sobre o saldo.</li>
+     *       todas com o bônus cadastrado (percentual do saldo mais pontos fixos, ver
+     *       {@link Recompensa#calcularBonus(long)}).</li>
      * </ul>
-     * A concessão e o registro do resgate acontecem na mesma transação do banco.
+     * A concessão e o registro do resgate acontecem na mesma transação do banco, e repetir a chamada
+     * nunca concede duas vezes (usuário + data final do ranking).
      *
      * @param usuarioResgatador usuário que deve receber a recompensa
      * @return o que aconteceu: concedida, já concedida antes ou não concedida
@@ -60,8 +64,13 @@ public class PosicaoRanking {
             return Resultado.NAO_CONCEDIDA;
         }
 
-        if (ranking.getTipo() == TipoRankingEnum.GRUPAL) {
-            System.out.println("Ranking de grupos não concede recompensa a usuários.");
+        if (ranking.getTipo() != TipoRankingEnum.INDIVIDUAL) {
+            System.out.println("Só o ranking individual concede recompensa a usuários.");
+            return Resultado.NAO_CONCEDIDA;
+        }
+        // O prêmio é da colocação desta posição: não pode ir para outro usuário.
+        if (usuario == null || usuario.getIdUsuario() != usuarioResgatador.getIdUsuario()) {
+            System.out.println("O usuário informado não é o dono desta posição: recompensa não concedida.");
             return Resultado.NAO_CONCEDIDA;
         }
         ResgateDAO resgateDAO = new ResgateDAO();
@@ -91,7 +100,7 @@ public class PosicaoRanking {
         Resultado resultado;
         if (this.posicao == 1) {
             ContaLuz conta = new ContaLuzDAO().buscarPendenteDoUsuario(usuarioResgatador.getIdUsuario());
-            if (conta == null) {
+            if (conta == null || conta.getValorConta() <= 0) {
                 System.out.println("1º lugar sem conta de luz pendente: prêmio não concedido.");
                 return Resultado.NAO_CONCEDIDA;
             }
@@ -102,7 +111,7 @@ public class PosicaoRanking {
             pagamento.setContaLuz(conta);
             resultado = resgateDAO.concederPagamentoConta(resgate, pagamento);
         } else {
-            resultado = resgateDAO.concederBonus(resgate, recompensa.getBonusPercentual());
+            resultado = resgateDAO.concederBonus(resgate);
         }
 
         if (resultado == Resultado.CONCEDIDA) {
@@ -113,7 +122,8 @@ public class PosicaoRanking {
 
     /**
      * Faixa de premiação (fonte única): 1º, 2º e 3º lugares têm recompensa própria (ids 1, 2 e 3);
-     * 4º ao 10º, recompensa 4; 11º ao 20º, recompensa 5; demais, recompensa 6.
+     * 4º ao 10º, recompensa 4; 11º ao 20º, recompensa 5; demais, recompensa
+     * {@value #ID_ULTIMA_RECOMPENSA_FAIXA}.
      *
      * @return o id da recompensa cadastrada, ou 0 se a posição for inválida (menor que 1)
      */
@@ -130,7 +140,12 @@ public class PosicaoRanking {
         if (posicao <= 20) {
             return 5;
         }
-        return 6;
+        return ID_ULTIMA_RECOMPENSA_FAIXA;
+    }
+
+    /** Se o id é de uma recompensa de faixa de premiação (1 a 6): essas não podem ser apagadas. */
+    public static boolean recompensaDeFaixa(int idRecompensa) {
+        return idRecompensa >= 1 && idRecompensa <= ID_ULTIMA_RECOMPENSA_FAIXA;
     }
 
     /**

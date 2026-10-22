@@ -10,6 +10,8 @@ public class PontuacaoMapper {
         pontuacao.setIdPontuacao(dto.idPontuacao());
         pontuacao.setImpacto(dto.impacto());
         pontuacao.setDificuldade(dto.dificuldade());
+        // O valor nunca vem do cliente: é sempre o da tabela para impacto e dificuldade.
+        pontuacao.setValorBase(Pontuacao.valorPadrao(dto.impacto(), dto.dificuldade()));
         return pontuacao;
     }
 

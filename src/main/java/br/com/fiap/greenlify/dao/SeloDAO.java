@@ -14,6 +14,10 @@ import java.util.List;
  * DAO da entidade Selo. Um selo representa uma conquista que o usuário
  * pode obter ao acumular pontos, dando direito a benefícios como
  * vale-entrega e crédito de carbono.
+ *
+ * <p>Cada registro de Usuario_Selo é um Selo Verde resgatado e conta na pontuação do grupo do
+ * usuário. Por isso um selo já resgatado não deve ser apagado (ver {@link #contarResgates}).
+ * Falhas de escrita lançam {@link IllegalStateException}.</p>
  */
 public class SeloDAO{
 
@@ -41,6 +45,7 @@ public class SeloDAO{
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível gravar o selo.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -76,6 +81,7 @@ public class SeloDAO{
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível gravar o selo.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -104,6 +110,7 @@ public class SeloDAO{
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível gravar o selo.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -112,6 +119,28 @@ public class SeloDAO{
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    /**
+     * Quantos resgates (registros de Usuario_Selo) o selo já tem. Enquanto for maior que zero, o selo
+     * não pode ser excluído: apagá-lo faria os resgates dos usuários sumirem da pontuação dos grupos.
+     *
+     * @param idSelo id do selo
+     * @throws IllegalStateException se o banco falhar (na dúvida, não se libera a exclusão)
+     */
+    public int contarResgates(int idSelo) {
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement("SELECT COUNT(*) FROM Usuario_Selo WHERE id_selo = ?")) {
+
+            ps.setInt(1, idSelo);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new IllegalStateException("Não foi possível verificar os resgates do selo.", e);
         }
     }
 

@@ -5,10 +5,11 @@ import br.com.fiap.greenlify.dto.CarteiraResponseDTO;
 import br.com.fiap.greenlify.models.Carteira;
 
 public class CarteiraMapper {
+    /** Carteira nova: o saldo sempre começa zerado, o cliente não define pontos nem valor. */
     public static Carteira dtoToEntity(CarteiraRequestDTO dto){
         Carteira carteira = new Carteira();
-        carteira.setQtdPontos(dto.qtdPontos());
-        carteira.setValorReal(dto.valorReal());
+        carteira.setQtdPontos(0);
+        carteira.recalcularValorReal();
         return carteira;
     }
 

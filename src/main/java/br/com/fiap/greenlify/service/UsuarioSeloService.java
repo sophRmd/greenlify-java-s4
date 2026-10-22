@@ -53,13 +53,8 @@ public class UsuarioSeloService {
     public void cadastrar(UsuarioSeloRequestDTO dto) {
         validar(dto);
 
-        boolean jaColetou = usuarioSeloDAO.listar()
-                .stream()
-                .anyMatch(us -> us.getUsuario() != null
-                        && us.getSelo() != null
-                        && us.getUsuario().getIdUsuario() == dto.idUsuario()
-                        && us.getSelo().getIdSelo() == dto.idSelo());
-        if (jaColetou) {
+        // Um selo por usuário: sem esta regra o mesmo resgate poderia ser contado de novo no ranking do grupo.
+        if (usuarioSeloDAO.existeColeta(dto.idUsuario(), dto.idSelo(), 0)) {
             System.out.println("ERRO: O usuário já coletou esse selo.");
             throw new IllegalArgumentException("O usuário já coletou esse selo.");
         }
@@ -87,6 +82,10 @@ public class UsuarioSeloService {
             throw new IllegalArgumentException("Coleta de selo não encontrada");
         }
         validar(dto);
+        // Alterar o usuário ou o selo não pode criar uma segunda coleta do mesmo selo.
+        if (usuarioSeloDAO.existeColeta(dto.idUsuario(), dto.idSelo(), id)) {
+            throw new IllegalArgumentException("O usuário já coletou esse selo.");
+        }
 
         UsuarioSelo usuarioSelo = UsuarioSeloMapper.dtoToEntity(dto);
         usuarioSelo.setIdUsuarioSelo(id);

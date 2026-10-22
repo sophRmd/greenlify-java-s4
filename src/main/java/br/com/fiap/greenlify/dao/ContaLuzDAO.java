@@ -12,6 +12,9 @@ import java.util.List;
 /**
  * Classe de acesso a dados (DAO) responsável pelas operações de
  * persistência de {@link ContaLuz} na tabela {@code Conta_Luz}.
+ *
+ * <p>Falhas de escrita lançam {@link IllegalStateException}, para quem chamou não responder
+ * "sucesso" quando nada foi gravado.</p>
  */
 public class ContaLuzDAO {
 
@@ -36,6 +39,7 @@ public class ContaLuzDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível cadastrar a conta de luz.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -68,6 +72,7 @@ public class ContaLuzDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível alterar a conta de luz.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -96,6 +101,7 @@ public class ContaLuzDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível excluir a conta de luz.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {

@@ -14,6 +14,8 @@ import java.util.List;
  * Classe responsável pelo acesso a dados da entidade Recompensa.
  * Contém as operações básicas de CRUD (cadastrar, alterar, excluir, buscar e listar)
  * feitas diretamente via JDBC, sem uso de ORM.
+ * Falhas de escrita (cadastrar, alterar, excluir) lançam {@link IllegalStateException}, para quem chamou
+ * não responder "sucesso" quando nada foi gravado.
  */
 public class RecompensaDAO {
 
@@ -40,6 +42,7 @@ public class RecompensaDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível cadastrar a recompensa.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -74,6 +77,7 @@ public class RecompensaDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível alterar a recompensa.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -102,6 +106,7 @@ public class RecompensaDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível excluir a recompensa.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {

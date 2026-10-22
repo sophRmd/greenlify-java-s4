@@ -1,6 +1,7 @@
 package br.com.fiap.greenlify.service;
 
 import br.com.fiap.greenlify.dao.PerfilSustentavelDAO;
+import br.com.fiap.greenlify.dao.UsuarioMissaoDAO;
 import br.com.fiap.greenlify.dto.PerfilSustentavelRequestDTO;
 import br.com.fiap.greenlify.dto.PerfilSustentavelResponseDTO;
 import br.com.fiap.greenlify.mapper.PerfilSustentavelMapper;
@@ -8,13 +9,16 @@ import br.com.fiap.greenlify.models.PerfilSustentavel;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class PerfilSustentavelService {
     private final PerfilSustentavelDAO perfilDAO;
+    private final UsuarioMissaoDAO usuarioMissaoDAO;
 
     public PerfilSustentavelService() {
         this.perfilDAO = new PerfilSustentavelDAO();
+        this.usuarioMissaoDAO = new UsuarioMissaoDAO();
     }
 
     public PerfilSustentavelResponseDTO buscarPorId(int id) {
@@ -22,13 +26,14 @@ public class PerfilSustentavelService {
         if (perfil == null) {
             throw new IllegalArgumentException("Perfil sustentável não encontrado");
         }
-        return PerfilSustentavelMapper.toDto(perfil);
+        return PerfilSustentavelMapper.toDto(comTotalReal(perfil, usuarioMissaoDAO.contarConcluidasPorUsuario()));
     }
 
     public List<PerfilSustentavelResponseDTO> listar() {
+        Map<Integer, Integer> totais = usuarioMissaoDAO.contarConcluidasPorUsuario();
         return perfilDAO.listar()
                 .stream()
-                .map(PerfilSustentavelMapper::toDto)
+                .map(p -> PerfilSustentavelMapper.toDto(comTotalReal(p, totais)))
                 .toList();
     }
 
@@ -55,7 +60,21 @@ public class PerfilSustentavelService {
             throw new IllegalArgumentException("O id informado está incorreto.");
         }
         validar(dto);
-        perfilDAO.alterar(PerfilSustentavelMapper.dtoToEntity(dto));
+        // o total de missões concluídas não é informado pelo cliente: é o mesmo do ranking
+        perfilDAO.alterar(comTotalReal(PerfilSustentavelMapper.dtoToEntity(dto), usuarioMissaoDAO.contarConcluidasPorUsuario()));
+    }
+
+    /**
+     * Troca o total de missões concluídas pelo mesmo número usado no ranking (conclusões de missões
+     * contínuas). É diferente da pontuação e dos indicadores ambientais (água, energia, carbono),
+     * que continuam sendo os do perfil.
+     */
+    private PerfilSustentavel comTotalReal(PerfilSustentavel perfil, Map<Integer, Integer> totais) {
+        int idUsuario = perfil.getUsuario() != null
+                ? perfil.getUsuario().getIdUsuario()
+                : perfil.getIdPerfilSustentavel();
+        perfil.setTotalMissoesConcluidas(totais.getOrDefault(idUsuario, 0));
+        return perfil;
     }
 
     private void validar(PerfilSustentavelRequestDTO dto) {

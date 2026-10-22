@@ -25,17 +25,19 @@ public class SeloController {
             service.cadastrar(selo);
             return ResponseEntity.status(HttpStatus.CREATED).body("Selo cadastrado com sucesso!");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            return erro(e, "Erro ao cadastrar o selo");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao cadastrar o selo: " + e.getMessage());
         }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SeloResponseDTO> buscarPorId(@PathVariable int id) {
+    public ResponseEntity<?> buscarPorId(@PathVariable int id) {
         try {
             return ResponseEntity.ok(service.buscarPorId(id));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return erro(e, "Erro ao buscar o selo");
         }
     }
 
@@ -51,21 +53,32 @@ public class SeloController {
             service.alterar(objeto, id);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
-            if (e.getMessage() != null && e.getMessage().contains("não encontrado")) {
-                return ResponseEntity.notFound().build();
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            return erro(e, "Erro ao alterar o selo");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao alterar o selo: " + e.getMessage());
         }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluir(@PathVariable int id) {
+    public ResponseEntity<String> excluir(@PathVariable int id) {
         try {
             service.excluir(id);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return erro(e, "Erro ao excluir o selo");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao excluir o selo: " + e.getMessage());
         }
+    }
+
+    /** Recurso inexistente vira 404; qualquer outra falha de validação vira 400. */
+    private ResponseEntity<String> erro(IllegalArgumentException e, String contexto) {
+        String mensagem = e.getMessage();
+        if (mensagem != null && mensagem.contains("não encontrad")) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mensagem);
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(contexto + ": " + mensagem);
     }
 }

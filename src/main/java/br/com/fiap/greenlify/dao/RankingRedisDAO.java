@@ -5,35 +5,79 @@ import org.springframework.data.redis.connection.lettuce.LettuceClientConfigurat
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Sorted Set {@value #CHAVE} do ranking all time: membro = id do usuário,
- * score = missões concluídas. Usa REDIS_HOST/REDIS_PORT (mesmas do
- * application.properties). O Oracle continua sendo a fonte da verdade: se o
- * Redis estiver fora do ar, os métodos não lançam exceção ({@code listar}
- * devolve {@code null}) e o chamador usa o Oracle.
+ * Sorted Set {@value #CHAVE} do ranking all time: membro = id do usuário, score = pontos elegíveis
+ * (missões contínuas concluídas, pela regra de {@code Pontuacao.pontosElegiveis}). É uma projeção
+ * do Oracle, que continua sendo a fonte da verdade: nenhum método lança exceção quando o Redis
+ * está fora do ar ({@code listar} e {@code reconciliar} devolvem {@code null}).
+ *
+ * <p>Usa REDIS_HOST/REDIS_PORT (mesmas do application.properties).</p>
  */
 public class RankingRedisDAO {
 
     public static final String CHAVE = "ranking:all-time";
 
+    /** Eventos já somados (um Set por mês, com validade): impede somar duas vezes o mesmo evento. */
+    public static final String CHAVE_EVENTOS = "ranking:all-time:eventos";
+
+    private static final long VALIDADE_EVENTOS_SEGUNDOS = 62L * 24 * 3600;
+
+    /**
+     * Soma os pontos só se o evento ainda não foi registrado. As duas operações (SADD do evento e
+     * ZINCRBY) rodam juntas no Redis, então uma tentativa repetida nunca soma duas vezes.
+     */
+    private static final DefaultRedisScript<Long> SCRIPT_INCREMENTAR = new DefaultRedisScript<>(
+            "if redis.call('SADD', KEYS[2], ARGV[1]) == 1 then "
+                    + "redis.call('EXPIRE', KEYS[2], ARGV[3]) "
+                    + "redis.call('ZINCRBY', KEYS[1], ARGV[2], ARGV[4]) "
+                    + "return 1 end "
+                    + "return 0", Long.class);
+
     private static volatile StringRedisTemplate template;
 
-    /** ZINCRBY: soma 1 missão concluída ao usuário. */
-    public void incrementar(int idUsuario) {
+    /** Resultado de {@link #incrementar}. */
+    public enum Resultado {
+        APLICADO, JA_PROCESSADO, SEM_PONTOS, REDIS_INDISPONIVEL
+    }
+
+    /** Resumo de {@link #reconciliar}: quantos membros foram corrigidos e quantos removidos. */
+    public record Reconciliacao(int corrigidos, int removidos) {
+    }
+
+    /**
+     * Soma os pontos elegíveis ao usuário (ZINCRBY), uma única vez por evento.
+     *
+     * @param idEvento identifica a conclusão (ex.: usuário + missão + mês); repetir o mesmo id não soma de novo
+     * @param dia      dia da conclusão (define o mês do conjunto de eventos)
+     */
+    public Resultado incrementar(int idUsuario, String idEvento, LocalDate dia, int pontos) {
+        if (pontos <= 0) {
+            return Resultado.SEM_PONTOS;
+        }
         try {
-            obterTemplate().opsForZSet().incrementScore(CHAVE, String.valueOf(idUsuario), 1);
+            YearMonth mes = dia != null ? YearMonth.from(dia) : YearMonth.now();
+            Long aplicado = obterTemplate().execute(SCRIPT_INCREMENTAR,
+                    List.of(CHAVE, CHAVE_EVENTOS + ":" + mes),
+                    idEvento, String.valueOf(pontos), String.valueOf(VALIDADE_EVENTOS_SEGUNDOS),
+                    String.valueOf(idUsuario));
+            return aplicado != null && aplicado == 1L ? Resultado.APLICADO : Resultado.JA_PROCESSADO;
         } catch (RuntimeException e) {
             System.err.println("Redis indisponível (incrementar): " + e.getMessage());
+            return Resultado.REDIS_INDISPONIVEL;
         }
     }
 
-    /** ZREVRANGE 0 -1 WITHSCORES: idUsuario -> missões concluídas, ou {@code null} se o Redis falhar. */
+    /** ZREVRANGE 0 -1 WITHSCORES: idUsuario -> pontos, ou {@code null} se o Redis falhar. */
     public Map<Integer, Integer> listar() {
         try {
             Set<ZSetOperations.TypedTuple<String>> tuplas =
@@ -53,16 +97,44 @@ public class RankingRedisDAO {
         }
     }
 
-    /** Substitui o Sorted Set inteiro pelos totais informados (vindos do Oracle). */
-    public void reconstruir(Map<Integer, Integer> totais) {
+    /**
+     * Corrige o Sorted Set para ficar igual aos totais do Oracle, membro a membro: grava o score
+     * dos que diferem ou faltam e remove os que não têm pontos no Oracle. Não apaga a chave nem
+     * a repovoa, então quem consulta durante a reconciliação nunca vê o ranking vazio.
+     *
+     * @param oracle idUsuario -> pontos elegíveis (só usuários com pontos), vindos do Oracle
+     * @return o resumo, ou {@code null} se o Redis estiver fora do ar
+     */
+    public Reconciliacao reconciliar(Map<Integer, Integer> oracle) {
         try {
-            StringRedisTemplate t = obterTemplate();
-            t.delete(CHAVE);
-            for (Map.Entry<Integer, Integer> e : totais.entrySet()) {
-                t.opsForZSet().add(CHAVE, String.valueOf(e.getKey()), e.getValue());
+            Map<Integer, Integer> atual = listar();
+            if (atual == null) {
+                return null;
             }
+            ZSetOperations<String, String> zset = obterTemplate().opsForZSet();
+            int corrigidos = 0;
+            int removidos = 0;
+
+            for (Map.Entry<Integer, Integer> e : oracle.entrySet()) {
+                if (e.getValue() <= 0) {
+                    continue;
+                }
+                if (!e.getValue().equals(atual.get(e.getKey()))) {
+                    zset.add(CHAVE, String.valueOf(e.getKey()), e.getValue());
+                    corrigidos++;
+                }
+            }
+            for (Integer idUsuario : atual.keySet()) {
+                Integer esperado = oracle.get(idUsuario);
+                if (esperado == null || esperado <= 0) {
+                    zset.remove(CHAVE, String.valueOf(idUsuario));
+                    removidos++;
+                }
+            }
+            return new Reconciliacao(corrigidos, removidos);
         } catch (RuntimeException e) {
-            System.err.println("Redis indisponível (reconstruir): " + e.getMessage());
+            System.err.println("Redis indisponível (reconciliar): " + e.getMessage());
+            return null;
         }
     }
 

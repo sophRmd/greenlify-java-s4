@@ -5,6 +5,7 @@ import br.com.fiap.greenlify.dao.RecompensaDAO;
 import br.com.fiap.greenlify.dto.RecompensaRequestDTO;
 import br.com.fiap.greenlify.dto.RecompensaResponseDTO;
 import br.com.fiap.greenlify.mapper.RecompensaMapper;
+import br.com.fiap.greenlify.models.PosicaoRanking;
 import br.com.fiap.greenlify.models.Recompensa;
 import org.springframework.stereotype.Service;
 
@@ -50,6 +51,11 @@ public class RecompensaService {
         Recompensa recompensa = recompensaDAO.buscarPorId(id);
         if (recompensa == null) {
             throw new IllegalArgumentException("Recompensa não encontrada");
+        }
+        // As recompensas 1 a 6 são as faixas de premiação do ranking: sem elas o fechamento não concede prêmio.
+        if (PosicaoRanking.recompensaDeFaixa(id)) {
+            System.out.println("ERRO: Recompensa de faixa de ranking não pode ser excluída.");
+            throw new IllegalArgumentException("As recompensas de 1 a 6 são as faixas de premiação do ranking e não podem ser excluídas.");
         }
         recompensaDAO.excluir(id);
     }

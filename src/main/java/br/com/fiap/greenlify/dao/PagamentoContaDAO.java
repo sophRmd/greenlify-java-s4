@@ -16,6 +16,9 @@ import java.util.List;
  * DAO da entidade PagamentoConta. Cada pagamento está associado a um usuário
  * e a uma conta de luz (colunas id_usuario e id_conta_luz da tabela Pagamento_Conta).
  *
+ * Falhas de escrita lançam {@link IllegalStateException}, para quem chamou não responder
+ * "sucesso" quando nada foi gravado.
+ *
  * Ordem das colunas assumida na tabela, usada na leitura por índice:
  * 1 id_pagamento, 2 dt_pagamento, 3 vl_pago, 4 id_usuario, 5 id_conta_luz.
  */
@@ -52,6 +55,7 @@ public class PagamentoContaDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível gravar o pagamento.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -109,6 +113,7 @@ public class PagamentoContaDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível alterar o pagamento.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {
@@ -137,6 +142,7 @@ public class PagamentoContaDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível excluir o pagamento.", e);
         } finally {
             try {
                 if (conexao != null && !conexao.isClosed()) {

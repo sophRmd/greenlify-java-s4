@@ -12,9 +12,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Representa um período de ranking dentro da plataforma GreenLify,
- * responsável por calcular e listar a classificação de usuários e de
- * grupos com base na pontuação acumulada.
+ * Representa um período de ranking mensal dentro da plataforma GreenLify, responsável por calcular
+ * e listar a classificação de usuários e de grupos.
+ *
+ * <p>Individual: missões contínuas concluídas dentro do período (empate: cadastro mais antigo).
+ * Grupal: total de Selos Verdes resgatados individualmente pelos integrantes atuais do grupo
+ * (ver {@code UsuarioSeloDAO.contarSelosPorGrupo}; o tamanho do grupo não entra na conta).
+ * Esses registros (Ranking/Posicao_Ranking) são do ciclo
+ * mensal, controlado pelo administrador, e não se misturam com o ranking all time, que não tem
+ * período, soma a pontuação elegível e vive no Redis (ver {@code RankingAllTimeService}).</p>
  */
 public class Ranking {
 
@@ -48,9 +54,14 @@ public class Ranking {
         return dataInicio != null && dataFim != null && !dataInicio.isAfter(dataFim);
     }
 
-    /** Se este ranking aberto já passou do fim do período em {@code hoje} e deve ser fechado. */
+    /** Se o período já terminou em {@code hoje} (o ranking não é mais vigente). Ranking vigente não pode ser fechado. */
+    public boolean terminou(LocalDate hoje) {
+        return dataFim != null && hoje != null && dataFim.isBefore(hoje);
+    }
+
+    /** Se este ranking aberto já passou do fim do período em {@code hoje} e pode ser fechado pelo administrador. */
     public boolean deveFechar(LocalDate hoje) {
-        return aceitaAtualizacao() && dataFim != null && hoje != null && dataFim.isBefore(hoje);
+        return aceitaAtualizacao() && terminou(hoje);
     }
 
     /**
@@ -85,9 +96,10 @@ public class Ranking {
             return posicoes;
         }
 
-        // uma única consulta agrupada: missões concluídas por usuário dentro do período
+        // uma única consulta agrupada: missões contínuas concluídas por usuário dentro do período
+        // (só o ciclo mensal; o total geral fica no ranking all time, que vive no Redis)
         Map<Integer, Integer> missoesNoPeriodo = new HashMap<>();
-        if (dataInicio != null && dataFim != null) {
+        if (periodoValido()) {
             missoesNoPeriodo = new UsuarioMissaoDAO().contarConcluidasPorUsuario(dataInicio, dataFim);
         }
 
@@ -150,54 +162,34 @@ public class Ranking {
     }
 
     /**
-     * Calcula o ranking de grupos com base na quantidade de selos
-     * conquistados pelos usuários de cada grupo (um selo conta como
+     * Calcula o ranking de grupos com base nos Selos Verdes resgatados
+     * individualmente pelos integrantes de cada grupo (um selo conta como
      * uma unidade, independentemente da pontuação necessária para
      * obtê-lo), ordenando do maior para o menor total e atribuindo a
-     * posição correspondente.
+     * posição correspondente. Só contam resgates válidos, sem duplicar
+     * (regras em {@code UsuarioSeloDAO.contarSelosPorGrupo}); o número de
+     * integrantes e a pontuação de missões não entram na conta.
      *
      * @return lista de posições de ranking dos grupos, já ordenada e
      *         numerada, ou lista vazia caso não existam grupos cadastrados
      */
     public List<PosicaoRanking> calcularRankingGrupos() {
         GrupoDAO grupoDAO = new GrupoDAO();
-        UsuarioComumDAO usuarioDAO = new UsuarioComumDAO();
-        UsuarioSeloDAO usuarioSeloDAO = new UsuarioSeloDAO();
 
         List<Grupo> todosGrupos = grupoDAO.listar();
-        List<UsuarioComum> todosUsuarios = usuarioDAO.listar();
         List<PosicaoRanking> posicoes = new ArrayList<>();
 
         if (todosGrupos == null || todosGrupos.isEmpty()) {
             return posicoes;
         }
 
+        // uma única consulta agrupada: selos válidos resgatados pelos integrantes atuais de cada grupo
+        Map<Integer, Integer> selosPorGrupo = new UsuarioSeloDAO().contarSelosPorGrupo();
+
         for (Grupo grupo : todosGrupos) {
-            int totalSelosGrupo = 0;
-
-            if (todosUsuarios != null) {
-                for (UsuarioComum usuario : todosUsuarios) {
-                    boolean pertenceGrupo = false;
-                    if (usuario.getGrupo() != null) {
-                        pertenceGrupo = (usuario.getGrupo().getIdGrupo() == grupo.getIdGrupo());
-                    }
-
-                    if (pertenceGrupo) {
-                        List<UsuarioSelo> selosDoUsuario = usuarioSeloDAO.buscarPorIdUsuario(usuario.getIdUsuario());
-                        if (selosDoUsuario != null) {
-                            for (UsuarioSelo us : selosDoUsuario) {
-                                if (us.getSelo() != null) {
-                                    totalSelosGrupo += 1;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             PosicaoRanking pr = new PosicaoRanking();
             pr.setGrupo(grupo);
-            pr.setPontuacao(totalSelosGrupo);
+            pr.setPontuacao(selosPorGrupo.getOrDefault(grupo.getIdGrupo(), 0));
             pr.setRanking(this);
 
             posicoes.add(pr);

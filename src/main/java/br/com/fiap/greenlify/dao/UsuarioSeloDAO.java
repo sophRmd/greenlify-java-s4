@@ -12,7 +12,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Date;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * DAO da entidade UsuarioSelo, que representa a coleta de um selo
@@ -214,6 +216,75 @@ public class UsuarioSeloDAO {
             e.printStackTrace();
         }
         return lista;
+    }
+
+    /**
+     * Total de Selos Verdes resgatados, por grupo, para o ranking coletivo (id do grupo -> total).
+     * Conta cada selo uma única vez por usuário e só entram resgates válidos:
+     * <ul>
+     *   <li>o selo ainda existe (JOIN em Selo) e a data de coleta está preenchida e não é futura;</li>
+     *   <li>repetições do mesmo selo pelo mesmo usuário valem uma só (DISTINCT), então um registro
+     *       duplicado nunca soma duas vezes;</li>
+     *   <li>o resgatante é usuário comum e pertence, <b>hoje</b>, a um grupo existente: quem sai do
+     *       grupo deixa de somar para ele (e quem entra passa a somar) na próxima atualização do
+     *       ranking, e quem não tem grupo não pontua em nenhum.</li>
+     * </ul>
+     * Não usa a tabela Resgate (prêmios de ranking individual) nem a pontuação de missões. Não há
+     * status de cancelamento: desfazer um resgate é excluir o registro de Usuario_Selo, e a
+     * contagem sempre reflete as linhas existentes.
+     *
+     * @return mapa idGrupo -> total de selos (grupos sem selos não aparecem)
+     * @throws IllegalStateException se o banco falhar
+     */
+    public Map<Integer, Integer> contarSelosPorGrupo() {
+        String sql = "SELECT u.id_grupo AS id_grupo, COUNT(*) AS total FROM ("
+                + "SELECT DISTINCT us.id_usuario AS id_usuario, us.id_selo AS id_selo "
+                + "FROM Usuario_Selo us "
+                + "JOIN Selo s ON s.id_selo = us.id_selo "
+                + "WHERE us.dt_coleta IS NOT NULL AND us.dt_coleta <= TRUNC(SYSDATE)) v "
+                + "JOIN Usuario u ON u.id_usuario = v.id_usuario "
+                + "JOIN Grupo g ON g.id_grupo = u.id_grupo "
+                + "WHERE u.nr_nivel_acesso = 0 "
+                + "GROUP BY u.id_grupo";
+
+        Map<Integer, Integer> totais = new HashMap<>();
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                totais.put(rs.getInt("id_grupo"), rs.getInt("total"));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new IllegalStateException("Não foi possível contar os selos por grupo.", e);
+        }
+        return totais;
+    }
+
+    /**
+     * Informa se o usuário já coletou o selo (um selo por usuário), sem carregar a tabela toda.
+     *
+     * @param ignorarIdUsuarioSelo registro a desconsiderar (o que está sendo alterado); use 0 para nenhum
+     */
+    public boolean existeColeta(int idUsuario, int idSelo, int ignorarIdUsuarioSelo) {
+        String sql = "SELECT COUNT(*) FROM Usuario_Selo "
+                + "WHERE id_usuario = ? AND id_selo = ? AND id_usuario_selo <> ?";
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, idUsuario);
+            ps.setInt(2, idSelo);
+            ps.setInt(3, ignorarIdUsuarioSelo);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new IllegalStateException("Não foi possível verificar a coleta do selo.", e);
+        }
     }
 
     private UsuarioSelo mapearBase(ResultSet rs) throws SQLException {

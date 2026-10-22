@@ -22,11 +22,11 @@ public class GrupoController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<GrupoResponseDTO> buscarPorId(@PathVariable int id) {
+    public ResponseEntity<?> buscarPorId(@PathVariable int id) {
         try {
             return ResponseEntity.ok(service.buscarPorId(id));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return erro(e, "Erro ao buscar o grupo");
         }
     }
 
@@ -36,28 +36,46 @@ public class GrupoController {
             service.cadastrar(dto);
             return ResponseEntity.status(HttpStatus.CREATED).body("Grupo cadastrado com sucesso!");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Erro ao cadastrar o grupo: " + e.getMessage());
+            return erro(e, "Erro ao cadastrar o grupo");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao cadastrar o grupo: " + e.getMessage());
         }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Void> atualizar(@PathVariable int id,
-                                          @RequestBody GrupoRequestDTO dto) {
+    public ResponseEntity<String> atualizar(@PathVariable int id,
+                                            @RequestBody GrupoRequestDTO dto) {
         try {
             service.atualizar(id, dto);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return erro(e, "Erro ao atualizar o grupo");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao atualizar o grupo: " + e.getMessage());
         }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluir(@PathVariable int id) {
+    public ResponseEntity<String> excluir(@PathVariable int id) {
         try {
             service.excluir(id);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return erro(e, "Erro ao excluir o grupo");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao excluir o grupo: " + e.getMessage());
         }
+    }
+
+    /** Recurso inexistente vira 404; qualquer outra falha de validação vira 400. */
+    private ResponseEntity<String> erro(IllegalArgumentException e, String contexto) {
+        String mensagem = e.getMessage();
+        if (mensagem != null && mensagem.contains("não encontrad")) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mensagem);
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(contexto + ": " + mensagem);
     }
 }

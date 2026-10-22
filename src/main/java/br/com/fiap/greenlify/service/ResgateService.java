@@ -9,6 +9,7 @@ import br.com.fiap.greenlify.mapper.ResgateMapper;
 import br.com.fiap.greenlify.models.Resgate;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -40,6 +41,7 @@ public class ResgateService {
 
     public void cadastrar(ResgateRequestDTO dto) {
         validar(dto);
+        validarDuplicidade(dto, 0);
         resgateDAO.cadastrar(ResgateMapper.dtoToEntity(dto));
     }
 
@@ -57,16 +59,32 @@ public class ResgateService {
             throw new IllegalArgumentException("Resgate não encontrado");
         }
         validar(dto);
+        validarDuplicidade(dto, id);
 
         Resgate resgate = ResgateMapper.dtoToEntity(dto);
         resgate.setIdResgate(id);
         resgateDAO.alterar(resgate);
     }
 
+    /**
+     * Usuário + data identifica o prêmio de um ranking (ver {@link Resgate#dataDoRanking}): um
+     * resgate manual não pode repetir essa dupla e burlar a regra de um prêmio por ranking.
+     */
+    private void validarDuplicidade(ResgateRequestDTO dto, int idResgateAtual) {
+        if (resgateDAO.existePorUsuarioEData(dto.idUsuario(), dto.dataConcessao(), idResgateAtual)) {
+            System.out.println("ERRO: O usuário já tem resgate nessa data.");
+            throw new IllegalArgumentException("O usuário já tem um resgate nessa data de concessão.");
+        }
+    }
+
     private void validar(ResgateRequestDTO dto) {
         if (dto.dataConcessao() == null) {
             System.out.println("ERRO: A data de concessão é obrigatória.");
             throw new IllegalArgumentException("A data de concessão é obrigatória.");
+        }
+        if (!Resgate.dataConcessaoValida(dto.dataConcessao(), LocalDate.now())) {
+            System.out.println("ERRO: A data de concessão não pode ser futura.");
+            throw new IllegalArgumentException("A data de concessão não pode ser futura.");
         }
         if (dto.idUsuario() <= 0) {
             System.out.println("ERRO: O usuário é obrigatório.");

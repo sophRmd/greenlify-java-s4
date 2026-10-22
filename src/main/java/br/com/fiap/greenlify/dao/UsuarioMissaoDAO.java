@@ -2,7 +2,6 @@ package br.com.fiap.greenlify.dao;
 
 import br.com.fiap.greenlify.enums.StatusUploadEnum;
 import br.com.fiap.greenlify.models.Missao;
-import br.com.fiap.greenlify.models.Streak;
 import br.com.fiap.greenlify.models.Usuario;
 import br.com.fiap.greenlify.models.UsuarioMissao;
 
@@ -483,6 +482,47 @@ public class UsuarioMissaoDAO {
     }
 
     /**
+     * Pontos elegíveis por usuário, a métrica do ranking all time no Redis: cada mês em que o usuário
+     * concluiu uma missão contínua (uploads APROVADOS em número igual ou maior que o limite) vale uma
+     * vez os pontos da pontuação da missão, a mesma regra de
+     * {@link br.com.fiap.greenlify.models.Pontuacao#pontosElegiveis}. Missões mensais e progresso sem
+     * conclusão não pontuam. É a fonte da verdade com que a reconciliação corrige o Redis.
+     *
+     * <p>Ao contrário das consultas de contagem, uma falha do banco não devolve mapa vazio: o mapa
+     * vazio significaria "ninguém pontuou" e a reconciliação apagaria o Redis.</p>
+     *
+     * @return mapa idUsuario -> pontos elegíveis (só usuários com pontos)
+     * @throws IllegalStateException se o banco falhar
+     */
+    public Map<Integer, Integer> somarPontosElegiveisPorUsuario() {
+        String sql = "SELECT id_usuario, SUM(pontos) AS total FROM ("
+                + "SELECT up.id_usuario AS id_usuario, p.nr_pontuacao AS pontos "
+                + "FROM Upload up "
+                + "JOIN Missao_Continua mc ON mc.id_missao = up.id_missao "
+                + "JOIN Pontuacao p ON p.id_pontuacao = mc.id_pontuacao "
+                + "WHERE up.ds_status = 'APROVADO' AND up.id_usuario IS NOT NULL "
+                + "AND mc.nr_limite_realizacoes > 0 "
+                + "GROUP BY up.id_usuario, up.id_missao, mc.nr_limite_realizacoes, p.nr_pontuacao, "
+                + "TRUNC(up.dt_envio, 'MM') "
+                + "HAVING COUNT(*) >= mc.nr_limite_realizacoes) "
+                + "GROUP BY id_usuario";
+
+        Map<Integer, Integer> totais = new HashMap<>();
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                totais.put(rs.getInt("id_usuario"), rs.getInt("total"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new IllegalStateException("Não foi possível calcular os pontos elegíveis.", e);
+        }
+        return totais;
+    }
+
+    /**
      * Grava a data em que o usuário concluiu a missão contínua, na conexão (transação) de quem
      * chamou. Dentro do mesmo mês a primeira conclusão é a que vale; em um novo mês (novo
      * ciclo das missões contínuas) a data é atualizada para a conclusão mais recente, e não
@@ -588,59 +628,7 @@ public class UsuarioMissaoDAO {
                 throw new IllegalArgumentException("A missão já foi concluída.");
             }
         }
-        registrarAtividadeNoStreak(con, idUsuario, dia);
-    }
-
-    /**
-     * Atualiza a sequência (streak) do usuário na transação, pelas regras do model {@link Streak};
-     * cria o registro zerado se ainda não existir. O usuário já está travado pela transação.
-     */
-    private void registrarAtividadeNoStreak(Connection con, int idUsuario, LocalDate dia) throws SQLException {
-        Streak streak = null;
-        try (PreparedStatement ps = con.prepareStatement(
-                "SELECT nr_maior_sequencia, nr_meses_ativos, dt_primeira_atividade, dt_ultima_atividade "
-                        + "FROM Sequencia WHERE id_sequencia = ? FOR UPDATE")) {
-            ps.setInt(1, idUsuario);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    streak = new Streak();
-                    streak.setIdStreak(idUsuario);
-                    streak.setMaiorSequencia(rs.getInt("nr_maior_sequencia"));
-                    streak.setSequenciaAtual(rs.getInt("nr_meses_ativos"));
-                    if (rs.getDate("dt_primeira_atividade") != null) {
-                        streak.setPrimeiraAtividade(rs.getDate("dt_primeira_atividade").toLocalDate());
-                    }
-                    if (rs.getDate("dt_ultima_atividade") != null) {
-                        streak.setUltimaAtividade(rs.getDate("dt_ultima_atividade").toLocalDate());
-                    }
-                }
-            }
-        }
-
-        if (streak == null) {
-            try (PreparedStatement ps = con.prepareStatement(
-                    "INSERT INTO Sequencia (id_sequencia, nr_maior_sequencia, nr_meses_ativos, "
-                            + "dt_primeira_atividade, dt_ultima_atividade, id_usuario) VALUES (?, 0, 0, NULL, NULL, ?)")) {
-                ps.setInt(1, idUsuario);
-                ps.setInt(2, idUsuario);
-                ps.executeUpdate();
-            }
-            streak = new Streak();
-            streak.setIdStreak(idUsuario);
-        }
-
-        streak.registrarAtividadeMensal(dia);
-
-        try (PreparedStatement ps = con.prepareStatement(
-                "UPDATE Sequencia SET nr_maior_sequencia = ?, nr_meses_ativos = ?, "
-                        + "dt_primeira_atividade = ?, dt_ultima_atividade = ? WHERE id_sequencia = ?")) {
-            ps.setInt(1, streak.getMaiorSequencia());
-            ps.setInt(2, streak.getSequenciaAtual());
-            ps.setDate(3, streak.getPrimeiraAtividade() != null ? Date.valueOf(streak.getPrimeiraAtividade()) : null);
-            ps.setDate(4, streak.getUltimaAtividade() != null ? Date.valueOf(streak.getUltimaAtividade()) : null);
-            ps.setInt(5, idUsuario);
-            ps.executeUpdate();
-        }
+        new StreakDAO().registrarAtividadeMensal(con, idUsuario, dia);   // única regra do streak
     }
 
     /** Executa a contagem com uma conexão local (não usa o campo compartilhado). */

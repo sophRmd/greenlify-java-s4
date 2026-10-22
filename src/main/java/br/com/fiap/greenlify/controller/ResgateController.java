@@ -25,17 +25,19 @@ public class ResgateController {
             service.cadastrar(resgate);
             return ResponseEntity.status(HttpStatus.CREATED).body("Resgate cadastrado com sucesso!");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            return erro(e, "Erro ao cadastrar o resgate");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao cadastrar o resgate: " + e.getMessage());
         }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ResgateResponseDTO> buscarPorId(@PathVariable int id) {
+    public ResponseEntity<?> buscarPorId(@PathVariable int id) {
         try {
             return ResponseEntity.ok(service.buscarPorId(id));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return erro(e, "Erro ao buscar o resgate");
         }
     }
 
@@ -46,12 +48,19 @@ public class ResgateController {
             service.alterar(objeto, id);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
-            if (e.getMessage() != null && e.getMessage().contains("não encontrado")) {
-                return ResponseEntity.notFound().build();
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            return erro(e, "Erro ao alterar o resgate");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao alterar o resgate: " + e.getMessage());
         }
     }
 
+    /** Recurso inexistente vira 404; qualquer outra falha de validação vira 400. */
+    private ResponseEntity<String> erro(IllegalArgumentException e, String contexto) {
+        String mensagem = e.getMessage();
+        if (mensagem != null && mensagem.contains("não encontrad")) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mensagem);
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(contexto + ": " + mensagem);
+    }
 }

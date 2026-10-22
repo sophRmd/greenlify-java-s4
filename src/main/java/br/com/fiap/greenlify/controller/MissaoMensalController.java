@@ -22,11 +22,11 @@ public class MissaoMensalController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<MissaoMensalCompletaResponseDTO> buscarPorId(@PathVariable int id) {
+    public ResponseEntity<?> buscarPorId(@PathVariable int id) {
         try {
             return ResponseEntity.ok(service.buscarPorId(id));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return erro(e, "Erro ao buscar a missão mensal");
         }
     }
 
@@ -36,9 +36,10 @@ public class MissaoMensalController {
             service.cadastrar(dto);
             return ResponseEntity.status(HttpStatus.CREATED).body("Missão mensal cadastrada com sucesso!");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Erro ao cadastrar a missão mensal: " + e.getMessage());
+            return erro(e, "Erro ao cadastrar a missão mensal");
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao cadastrar a missão mensal: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao cadastrar a missão mensal: " + e.getMessage());
         }
     }
 
@@ -49,9 +50,10 @@ public class MissaoMensalController {
             service.atualizar(id, dto);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
-            return erro(e);
+            return erro(e, "Erro ao atualizar a missão mensal");
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao atualizar a missão mensal: " + e.getMessage());
         }
     }
 
@@ -61,17 +63,19 @@ public class MissaoMensalController {
             service.excluir(id);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
-            return erro(e);
+            return erro(e, "Erro ao excluir a missão mensal");
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao excluir a missão mensal: " + e.getMessage());
         }
     }
 
-    /** "Não encontrada" vira 404; as demais recusas (regra de negócio) vão como 400 com a mensagem. */
-    private ResponseEntity<String> erro(IllegalArgumentException e) {
-        if (e.getMessage() != null && e.getMessage().contains("não encontrada")) {
-            return ResponseEntity.notFound().build();
+    /** Recurso inexistente vira 404; qualquer outra falha de validação vira 400. */
+    private ResponseEntity<String> erro(IllegalArgumentException e, String contexto) {
+        String mensagem = e.getMessage();
+        if (mensagem != null && mensagem.contains("não encontrad")) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mensagem);
         }
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(contexto + ": " + mensagem);
     }
 }

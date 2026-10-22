@@ -37,17 +37,27 @@ public class Streak {
      * <ul>
      *     <li>Se já existir uma atividade registrada no mesmo mês, nada é
      *     alterado (o streak só conta uma vez por mês);</li>
+     *     <li>Uma data de mês anterior à última atividade é ignorada (a sequência nunca
+     *     anda para trás, então repetir ou atrasar o registro não a quebra);</li>
      *     <li>Se a atividade anterior foi no mês imediatamente anterior,
      *     a sequência atual é incrementada;</li>
      *     <li>Caso contrário (primeira atividade ou houve um mês sem
      *     nenhuma missão concluída), a sequência atual reinicia em 1.</li>
      * </ul>
      *
+     * <p>É o único evento que altera o streak: a conclusão de uma missão mensal. Progresso sem
+     * conclusão, uploads e missões contínuas não passam por aqui.</p>
+     *
      * @param dataConclusao data em que a missão mensal foi concluída
+     * @return {@code true} se a sequência foi alterada; {@code false} se a chamada não teve efeito
      */
-    public void registrarAtividadeMensal(LocalDate dataConclusao) {
-        if (ultimaAtividade != null && mesmoMes(ultimaAtividade, dataConclusao)) {
-            return;
+    public boolean registrarAtividadeMensal(LocalDate dataConclusao) {
+        if (dataConclusao == null) {
+            return false;
+        }
+        if (ultimaAtividade != null
+                && (mesmoMes(ultimaAtividade, dataConclusao) || dataConclusao.isBefore(ultimaAtividade))) {
+            return false;
         }
 
         if (primeiraAtividade == null) {
@@ -65,6 +75,7 @@ public class Streak {
         }
 
         ultimaAtividade = dataConclusao;
+        return true;
     }
 
     /**

@@ -3,10 +3,14 @@ package br.com.fiap.greenlify.service;
 import br.com.fiap.greenlify.util.ValidadorEntrada;
 import br.com.fiap.greenlify.dao.FingerprintDAO;
 import br.com.fiap.greenlify.dao.FingerprintFrameDAO;
+import br.com.fiap.greenlify.dao.UploadDAO;
 import br.com.fiap.greenlify.dto.FingerprintFrameRequestDTO;
 import br.com.fiap.greenlify.dto.FingerprintFrameResponseDTO;
+import br.com.fiap.greenlify.enums.StatusUploadEnum;
 import br.com.fiap.greenlify.mapper.FingerprintFrameMapper;
+import br.com.fiap.greenlify.models.Fingerprint;
 import br.com.fiap.greenlify.models.FingerprintFrame;
+import br.com.fiap.greenlify.models.Upload;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,10 +19,12 @@ import java.util.List;
 public class FingerprintFrameService {
     private final FingerprintFrameDAO frameDAO;
     private final FingerprintDAO fingerprintDAO;
+    private final UploadDAO uploadDAO;
 
     public FingerprintFrameService() {
         this.frameDAO = new FingerprintFrameDAO();
         this.fingerprintDAO = new FingerprintDAO();
+        this.uploadDAO = new UploadDAO();
     }
 
     public FingerprintFrameResponseDTO buscarPorId(int id) {
@@ -45,6 +51,7 @@ public class FingerprintFrameService {
 
     public void cadastrar(FingerprintFrameRequestDTO dto) {
         validar(dto);
+        exigirUploadNaoConsolidado(dto.idFingerprint());
         if (existeNumeroFrame(dto, null)) {
             System.out.println("ERRO: Já existe um frame com esse número nessa fingerprint.");
             throw new IllegalArgumentException("Já existe um frame com esse número nessa fingerprint.");
@@ -57,6 +64,7 @@ public class FingerprintFrameService {
         if (frame == null) {
             throw new IllegalArgumentException("Frame não encontrado");
         }
+        exigirUploadNaoConsolidado(frame.getFingerprint().getIdFingerprint());
         frameDAO.excluir(id);
     }
 
@@ -66,6 +74,13 @@ public class FingerprintFrameService {
             throw new IllegalArgumentException("Frame não encontrado");
         }
         validar(dto);
+        // O frame fica na fingerprint de origem, e o de upload aprovado não é alterado.
+        if (existente.getFingerprint() == null
+                || existente.getFingerprint().getIdFingerprint() != dto.idFingerprint()) {
+            System.out.println("ERRO: O frame não pode mudar de fingerprint.");
+            throw new IllegalArgumentException("O frame não pode ser movido para outra fingerprint.");
+        }
+        exigirUploadNaoConsolidado(dto.idFingerprint());
         if (existeNumeroFrame(dto, id)) {
             System.out.println("ERRO: Já existe um frame com esse número nessa fingerprint.");
             throw new IllegalArgumentException("Já existe um frame com esse número nessa fingerprint.");
@@ -74,6 +89,24 @@ public class FingerprintFrameService {
         FingerprintFrame frame = FingerprintFrameMapper.dtoToEntity(dto);
         frame.setIdFingerprintFrame(id);
         frameDAO.alterar(frame);
+    }
+
+    /**
+     * Os frames de um upload aprovado ou parcialmente aprovado são a base da verificação de duplicidade
+     * e da comprovação já contabilizada: ficam preservados (sem incluir, alterar nem excluir).
+     */
+    private void exigirUploadNaoConsolidado(int idFingerprint) {
+        Fingerprint fingerprint = fingerprintDAO.buscarPorId(idFingerprint);
+        if (fingerprint == null || fingerprint.getUpload() == null) {
+            return;
+        }
+        Upload upload = uploadDAO.buscarPorId(fingerprint.getUpload().getIdUpload());
+        if (upload != null && (upload.getStatus() == StatusUploadEnum.APROVADO
+                || upload.getStatus() == StatusUploadEnum.PARCIALMENTE_APROVADO)) {
+            System.out.println("ERRO: Frames de upload " + upload.getStatus() + " são preservados.");
+            throw new IllegalArgumentException(
+                    "Os frames de um upload aprovado ou parcialmente aprovado são preservados e não podem ser alterados.");
+        }
     }
 
     private boolean existeNumeroFrame(FingerprintFrameRequestDTO dto, Integer idIgnorado) {

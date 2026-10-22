@@ -1,5 +1,6 @@
 package br.com.fiap.greenlify.service;
 
+import br.com.fiap.greenlify.dao.AdminDAO;
 import br.com.fiap.greenlify.dao.CarteiraDAO;
 import br.com.fiap.greenlify.dao.GrupoDAO;
 import br.com.fiap.greenlify.dao.MissaoContinuaDAO;
@@ -14,6 +15,8 @@ import br.com.fiap.greenlify.dto.ResumoGrupoResponseDTO;
 import br.com.fiap.greenlify.dto.ResumoImpactoResponseDTO;
 import br.com.fiap.greenlify.dto.ResumoMissoesResponseDTO;
 import br.com.fiap.greenlify.dto.ResumoMissoesResponseDTO.GrupoMissoes;
+import br.com.fiap.greenlify.enums.StatusUploadEnum;
+import br.com.fiap.greenlify.enums.TipoMissaoEnum;
 import br.com.fiap.greenlify.models.Carteira;
 import br.com.fiap.greenlify.models.Grupo;
 import br.com.fiap.greenlify.models.MissaoContinua;
@@ -21,6 +24,7 @@ import br.com.fiap.greenlify.models.MissaoMensal;
 import br.com.fiap.greenlify.models.PosicaoRanking;
 import br.com.fiap.greenlify.models.Selo;
 import br.com.fiap.greenlify.models.Streak;
+import br.com.fiap.greenlify.models.Usuario;
 import br.com.fiap.greenlify.models.UsuarioComum;
 import br.com.fiap.greenlify.models.UsuarioMissao;
 import br.com.fiap.greenlify.models.UsuarioSelo;
@@ -42,6 +46,7 @@ import java.util.Set;
 @Service
 public class ResumoService {
     private final UsuarioComumDAO usuarioDAO;
+    private final AdminDAO adminDAO;
     private final MissaoContinuaDAO continuaDAO;
     private final MissaoMensalDAO mensalDAO;
     private final UsuarioMissaoDAO usuarioMissaoDAO;
@@ -54,6 +59,7 @@ public class ResumoService {
 
     public ResumoService() {
         this.usuarioDAO = new UsuarioComumDAO();
+        this.adminDAO = new AdminDAO();
         this.continuaDAO = new MissaoContinuaDAO();
         this.mensalDAO = new MissaoMensalDAO();
         this.usuarioMissaoDAO = new UsuarioMissaoDAO();
@@ -79,7 +85,9 @@ public class ResumoService {
         for (MissaoContinua m : continuaDAO.listar()) {
             total++;
             if (m.getPontuacao() != null) {
-                pontos += m.getPontuacao().getValorBase();
+                // mesma regra que credita pontos: o que a missão vale ao ser concluída
+                pontos += m.getPontuacao().pontosElegiveis(
+                        TipoMissaoEnum.MISSAO_CONTINUA, StatusUploadEnum.APROVADO, true);
             }
             Integer feito = progresso.get(m.getIdMissao());
             if (feito != null && concluida(feito, m.getLimiteRealizacoes())) {
@@ -171,7 +179,7 @@ public class ResumoService {
     // ---------- Meu Impacto ----------
 
     public ResumoImpactoResponseDTO resumirImpacto(int idUsuario) {
-        UsuarioComum usuario = verificarUsuario(idUsuario);
+        Usuario usuario = verificarUsuario(idUsuario);
 
         Carteira carteira = carteiraDAO.buscarPorIdUsuario(idUsuario);
         int pontos = carteira != null ? carteira.getQtdPontos() : 0;
@@ -193,28 +201,19 @@ public class ResumoService {
         }
         int meses = streak != null ? streak.getSequenciaAtual() : 0;
 
-        Map<Integer, Integer> progresso = progressoPorMissao(idUsuario);
-        int concluidas = 0;
-        for (MissaoContinua m : continuaDAO.listar()) {
-            Integer feito = progresso.get(m.getIdMissao());
-            if (feito != null && concluida(feito, m.getLimiteRealizacoes())) {
-                concluidas++;
-            }
-        }
-        for (MissaoMensal m : mensalDAO.listar()) {
-            Integer feito = progresso.get(m.getIdMissao());
-            if (feito != null && concluida(feito, m.getMeta())) {
-                concluidas++;
-            }
-        }
+        // mesmo total usado pelo ranking (conclusões de missões contínuas); não é a pontuação
+        int concluidas = usuarioMissaoDAO.contarConcluidasPorUsuario().getOrDefault(idUsuario, 0);
 
         return new ResumoImpactoResponseDTO(idUsuario, usuario.getNome(), pontos, posicao, meses, concluidas);
     }
 
     // ---------- auxiliares ----------
 
-    private UsuarioComum verificarUsuario(int idUsuario) {
-        UsuarioComum usuario = usuarioDAO.buscarPorId(idUsuario);
+    private Usuario verificarUsuario(int idUsuario) {
+        Usuario usuario = usuarioDAO.buscarPorId(idUsuario);
+        if (usuario == null) {
+            usuario = adminDAO.buscarPorId(idUsuario);
+        }
         if (usuario == null) {
             throw new IllegalArgumentException("Usuário não encontrado");
         }

@@ -1,5 +1,6 @@
 package br.com.fiap.greenlify.service;
 
+import br.com.fiap.greenlify.dao.AdminDAO;
 import br.com.fiap.greenlify.dao.StreakDAO;
 import br.com.fiap.greenlify.dao.UsuarioComumDAO;
 import br.com.fiap.greenlify.dto.StreakResponseDTO;
@@ -13,10 +14,12 @@ import java.time.LocalDate;
 public class StreakService {
     private final StreakDAO streakDAO;
     private final UsuarioComumDAO usuarioDAO;
+    private final AdminDAO adminDAO;
 
     public StreakService() {
         this.streakDAO = new StreakDAO();
         this.usuarioDAO = new UsuarioComumDAO();
+        this.adminDAO = new AdminDAO();
     }
 
     public StreakResponseDTO buscarPorIdUsuario(int idUsuario) {
@@ -38,19 +41,8 @@ public class StreakService {
         return StreakMapper.toDto(streak);
     }
 
-    /**
-     * Registra uma atividade mensal do usuário (missão mensal concluída),
-     * atualizando a sequência pelas regras do model {@link Streak}.
-     */
-    public void registrarAtividade(int idUsuario, LocalDate data) {
-        verificarUsuario(idUsuario);
-        Streak streak = streakDAO.buscarOuCriar(idUsuario);
-        streak.registrarAtividadeMensal(data);
-        streakDAO.atualizar(streak, idUsuario);
-    }
-
     private void verificarUsuario(int idUsuario) {
-        if (usuarioDAO.buscarPorId(idUsuario) == null) {
+        if (usuarioDAO.buscarPorId(idUsuario) == null && adminDAO.buscarPorId(idUsuario) == null) {
             System.out.println("ERRO: Usuário informado não existe.");
             throw new IllegalArgumentException("O usuário informado não existe.");
         }

@@ -28,6 +28,13 @@ import java.util.Map;
  * <p>As consultas de leitura trazem posição, ranking, usuário e grupo em um
  * único SELECT (JOIN), usando apenas UMA conexão por chamada. Este DAO não
  * chama nenhum outro DAO.</p>
+ *
+ * <p>As posições de um ranking encerrado são histórico: {@link #substituirPorRanking} recusa
+ * regravá-las.</p>
+ *
+ * <p>Estas posições são do ranking mensal (ligadas a um {@code Ranking} com período). O ranking
+ * all time não é gravado aqui: vive no Redis. Falhas de escrita lançam
+ * {@link IllegalStateException} em vez de passar em silêncio.</p>
  */
 public class PosicaoRankingDAO {
 
@@ -50,8 +57,14 @@ public class PosicaoRankingDAO {
      * Cadastra uma nova posição de ranking e preenche o id gerado pelo banco.
      *
      * @param posicaoRanking posição de ranking a ser cadastrada (com usuário OU grupo)
+     * @throws IllegalArgumentException se faltar o ranking ou não houver exatamente um de usuário/grupo
+     * @throws IllegalStateException    se o banco falhar
      */
     public void cadastrar(PosicaoRanking posicaoRanking) {
+        if (posicaoRanking == null || posicaoRanking.getRanking() == null) {
+            throw new IllegalArgumentException("A posição precisa estar ligada a um ranking.");
+        }
+        validarDono(posicaoRanking);
         String sql = "INSERT INTO Posicao_Ranking (nr_posicao, nr_pontuacao, id_ranking, id_usuario, id_grupo) "
                 + "VALUES (?, ?, ?, ?, ?)";
 
@@ -76,6 +89,88 @@ public class PosicaoRankingDAO {
 
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível gravar a posição do ranking.", e);
+        }
+    }
+
+    /**
+     * Troca todas as posições de um ranking pelas informadas, em UMA transação: apaga as antigas e
+     * grava as novas e só então confirma. Quem consulta durante a atualização continua vendo as
+     * posições anteriores (nunca o ranking vazio ou pela metade), e se qualquer etapa falhar nada
+     * muda.
+     *
+     * @param idRanking identificador do ranking
+     * @param posicoes  novas posições (usuário OU grupo em cada uma)
+     * <p>A linha do ranking é travada (FOR UPDATE) durante a troca: atualizações e fechamentos
+     * simultâneos do mesmo ranking ficam em fila. Se o ranking já estiver FECHADO, nada é regravado.</p>
+     *
+     * @throws IllegalArgumentException se alguma posição não tiver exatamente um de usuário/grupo
+     *                                  ou se o ranking não existir
+     * @throws IllegalStateException    se o ranking estiver encerrado ou se o banco falhar (as
+     *                                  posições antigas são mantidas)
+     */
+    public void substituirPorRanking(int idRanking, List<PosicaoRanking> posicoes) {
+        if (posicoes == null) {
+            throw new IllegalArgumentException("A lista de posições é obrigatória.");
+        }
+        for (PosicaoRanking posicao : posicoes) {
+            validarDono(posicao);
+        }
+        String sql = "INSERT INTO Posicao_Ranking (nr_posicao, nr_pontuacao, id_ranking, id_usuario, id_grupo) "
+                + "VALUES (?, ?, ?, ?, ?)";
+
+        try (Connection conexao = ConnectionFactory.obterConexao()) {
+            boolean confirmado = false;
+            try {
+                conexao.setAutoCommit(false);
+
+                try (PreparedStatement trava = conexao.prepareStatement(
+                        "SELECT ds_status FROM Ranking WHERE id_ranking = ? FOR UPDATE")) {
+                    trava.setInt(1, idRanking);
+                    try (ResultSet rs = trava.executeQuery()) {
+                        if (!rs.next()) {
+                            throw new IllegalArgumentException("Ranking não encontrado");
+                        }
+                        if (StatusRankingEnum.FECHADO.name().equals(rs.getString(1))) {
+                            throw new IllegalStateException(
+                                    "O ranking está encerrado: as posições do histórico são preservadas.");
+                        }
+                    }
+                }
+
+                try (PreparedStatement apagar = conexao.prepareStatement(
+                        "DELETE FROM Posicao_Ranking WHERE id_ranking = ?")) {
+                    apagar.setInt(1, idRanking);
+                    apagar.executeUpdate();
+                }
+
+                try (PreparedStatement ps = conexao.prepareStatement(sql)) {
+                    for (PosicaoRanking posicao : posicoes) {
+                        ps.setInt(1, posicao.getPosicao());
+                        ps.setInt(2, posicao.getPontuacao());
+                        ps.setInt(3, idRanking);
+                        definirInteiroOuNulo(ps, 4, posicao.getUsuario() != null
+                                ? posicao.getUsuario().getIdUsuario() : null);
+                        definirInteiroOuNulo(ps, 5, posicao.getGrupo() != null
+                                ? posicao.getGrupo().getIdGrupo() : null);
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+
+                conexao.commit();
+                confirmado = true;
+            } finally {
+                // Desfaz antes de devolver a conexão: no Oracle, ligar o autocommit com a
+                // transação aberta confirmaria tudo.
+                if (!confirmado) {
+                    conexao.rollback();
+                }
+                conexao.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new IllegalStateException("Não foi possível gravar as posições do ranking.", e);
         }
     }
 
@@ -83,6 +178,7 @@ public class PosicaoRankingDAO {
      * Exclui uma posição de ranking pelo seu identificador.
      *
      * @param idPosicao identificador da posição
+     * @throws IllegalStateException se o banco falhar
      */
     public void excluir(int idPosicao) {
         executarUpdate("DELETE FROM Posicao_Ranking WHERE id_posicao = ?", idPosicao);
@@ -92,6 +188,7 @@ public class PosicaoRankingDAO {
      * Exclui todas as posições de um ranking (usado ao recalcular o ranking).
      *
      * @param idRanking identificador do ranking
+     * @throws IllegalStateException se o banco falhar
      */
     public void excluirPorRanking(int idRanking) {
         executarUpdate("DELETE FROM Posicao_Ranking WHERE id_ranking = ?", idRanking);
@@ -156,6 +253,14 @@ public class PosicaoRankingDAO {
             ps.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
+            throw new IllegalStateException("Não foi possível excluir as posições do ranking.", e);
+        }
+    }
+
+    /** O CHECK da tabela exige usuário OU grupo (nunca os dois, nunca nenhum): confere antes de ir ao banco. */
+    private void validarDono(PosicaoRanking posicao) {
+        if (posicao == null || (posicao.getUsuario() == null) == (posicao.getGrupo() == null)) {
+            throw new IllegalArgumentException("A posição deve ter um usuário OU um grupo.");
         }
     }
 
@@ -241,7 +346,9 @@ public class PosicaoRankingDAO {
             usuario.setIdUsuario(idUsuario);
             usuario.setNome(rs.getString("u_nome"));
             usuario.setCpf(rs.getString("u_cpf"));
-            usuario.setDataNascimento(rs.getDate("u_nascimento").toLocalDate());
+            if (rs.getDate("u_nascimento") != null) {
+                usuario.setDataNascimento(rs.getDate("u_nascimento").toLocalDate());
+            }
             usuario.setEmail(rs.getString("u_email"));
             usuario.setSenha(rs.getString("u_senha"));
             usuario.setNivelAcesso(rs.getInt("u_nivel"));
@@ -265,7 +372,9 @@ public class PosicaoRankingDAO {
                 grupo = new Grupo();
                 grupo.setIdGrupo(idGrupo);
                 grupo.setNome(rs.getString("g_nome"));
-                grupo.setDataCriacao(rs.getDate("g_criacao").toLocalDate());
+                if (rs.getDate("g_criacao") != null) {
+                    grupo.setDataCriacao(rs.getDate("g_criacao").toLocalDate());
+                }
                 grupo.setQtdUsuarios(rs.getInt("g_qtd"));
                 grupo.setStatusGrupo(rs.getInt("g_status"));
                 cacheGrupos.put(idGrupo, grupo);

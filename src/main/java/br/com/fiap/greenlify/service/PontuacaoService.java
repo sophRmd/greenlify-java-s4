@@ -46,6 +46,13 @@ public class PontuacaoService {
                 .toList();
     }
 
+    /**
+     * Cadastra a pontuação. O valor em pontos nunca vem do cliente: é o da tabela para o impacto e a
+     * dificuldade, e o DAO ainda confere a correspondência antes de gravar.
+     *
+     * @throws IllegalArgumentException se o DTO é inválido ou a combinação/id já existe
+     * @throws IllegalStateException    se o banco falhar (nada é gravado)
+     */
     public void cadastrar(PontuacaoRequestDTO dto) {
         validar(dto);
 
@@ -58,9 +65,15 @@ public class PontuacaoService {
             throw new IllegalArgumentException(
                     "Já existe uma pontuação para essa combinação de impacto e dificuldade.");
         }
-        pontuacaoDAO.cadastrar(PontuacaoMapper.dtoToEntity(dto));
+        pontuacaoDAO.cadastrar(entidadeConsistente(dto));
     }
 
+    /**
+     * Exclui a pontuação, desde que nenhuma missão contínua a use (conferido pelo DAO).
+     *
+     * @throws IllegalArgumentException se a pontuação não existe ou está em uso
+     * @throws IllegalStateException    se o banco falhar
+     */
     public void excluir(int id) {
         Pontuacao pontuacao = pontuacaoDAO.buscarPorId(id);
         if (pontuacao == null) {
@@ -69,6 +82,14 @@ public class PontuacaoService {
         pontuacaoDAO.excluir(id);
     }
 
+    /**
+     * Altera impacto e dificuldade; o valor em pontos é recalculado pela tabela. Missões que usam
+     * a pontuação passam a creditar o novo valor nas próximas conclusões; o que já foi creditado
+     * não muda.
+     *
+     * @throws IllegalArgumentException se a pontuação não existe, o DTO é inválido ou a combinação já existe
+     * @throws IllegalStateException    se o banco falhar
+     */
     public void alterar(PontuacaoRequestDTO dto, int id) {
         Pontuacao existente = pontuacaoDAO.buscarPorId(id);
         if (existente == null) {
@@ -85,7 +106,17 @@ public class PontuacaoService {
             throw new IllegalArgumentException(
                     "Já existe uma pontuação para essa combinação de impacto e dificuldade.");
         }
-        pontuacaoDAO.alterar(PontuacaoMapper.dtoToEntity(dto));
+        pontuacaoDAO.alterar(entidadeConsistente(dto));
+    }
+
+    /** Monta a pontuação e confere se o valor corresponde a impacto e dificuldade (senão, recusa). */
+    private Pontuacao entidadeConsistente(PontuacaoRequestDTO dto) {
+        Pontuacao pontuacao = PontuacaoMapper.dtoToEntity(dto);
+        if (!pontuacao.correspondeAoCalculo()) {
+            throw new IllegalArgumentException(
+                    "O valor da pontuação não corresponde ao impacto e à dificuldade informados.");
+        }
+        return pontuacao;
     }
 
     private boolean existeCombinacao(PontuacaoRequestDTO dto, Integer idIgnorado) {

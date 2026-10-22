@@ -5,12 +5,17 @@ import java.time.LocalDate;
 /**
  * Representa um grupo de usuários dentro da plataforma GreenLify, utilizado
  * para agrupar {@link UsuarioComum} e compor o ranking por grupos.
+ *
+ * <p>{@code qtdUsuarios} é o número de integrantes (tamanho do grupo). A pontuação do grupo no
+ * ranking é outra métrica: o total de Selos Verdes resgatados individualmente pelos integrantes
+ * (ver {@code Ranking.calcularRankingGrupos}). Um grupo maior não tem, por isso, mais pontos.</p>
  */
 public class Grupo {
 
     private int idGrupo;
     private String nome;
     private LocalDate dataCriacao;
+    /** Integrantes do grupo (calculado a partir de Usuario.id_grupo; não é pontuação). */
     private int qtdUsuarios;
     private int statusGrupo;
 

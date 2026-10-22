@@ -2,6 +2,7 @@ package br.com.fiap.greenlify.controller;
 
 import br.com.fiap.greenlify.dto.StreakResponseDTO;
 import br.com.fiap.greenlify.service.StreakService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,20 +17,28 @@ public class StreakController {
     }
 
     @PostMapping("/usuario/{idUsuario}/iniciar")
-    public ResponseEntity<StreakResponseDTO> buscarOuCriar(@PathVariable int idUsuario) {
+    public ResponseEntity<?> buscarOuCriar(@PathVariable int idUsuario) {
         try {
             return ResponseEntity.ok(service.buscarOuCriar(idUsuario));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            // aqui toda recusa significa que o usuário/grupo da URL não existe
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao iniciar a sequência: " + e.getMessage());
         }
     }
 
     @GetMapping("/usuario/{idUsuario}")
-    public ResponseEntity<StreakResponseDTO> buscarPorIdUsuario(@PathVariable int idUsuario) {
+    public ResponseEntity<?> buscarPorIdUsuario(@PathVariable int idUsuario) {
         try {
             return ResponseEntity.ok(service.buscarPorIdUsuario(idUsuario));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            // aqui toda recusa significa que o usuário/grupo da URL não existe
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao buscar a sequência: " + e.getMessage());
         }
     }
 

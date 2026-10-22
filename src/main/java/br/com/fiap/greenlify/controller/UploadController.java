@@ -3,38 +3,33 @@ package br.com.fiap.greenlify.controller;
 import br.com.fiap.greenlify.dto.UploadRequestDTO;
 import br.com.fiap.greenlify.dto.UploadResponseDTO;
 import br.com.fiap.greenlify.service.UploadService;
-import br.com.fiap.greenlify.service.UsuarioService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Envio de comprovações. Os endpoints não exigem login. Um upload gravado não tem alteração nem
+ * exclusão: o resultado da análise e a pontuação já consolidada ficam preservados.
+ */
 @CrossOrigin("*")
 @RestController
 @RequestMapping("/uploads")
 public class UploadController {
     private final UploadService service;
-    private final UsuarioService usuarioService;
 
     public UploadController() {
         this.service = new UploadService();
-        this.usuarioService = new UsuarioService();
     }
 
     /** Devolve o upload gravado, já com status, parecer e confiança de duplicidade. */
     @PostMapping
-    public ResponseEntity<?> cadastrar(
-            @RequestBody UploadRequestDTO upload,
-            @RequestHeader(value = "X-Usuario-Email", required = false) String email,
-            @RequestHeader(value = "X-Usuario-Senha", required = false) String senha) {
-        // Exige login e que o envio seja em nome do próprio usuário autenticado.
-        usuarioService.exigirDono(email, senha, upload.idUsuario());
+    public ResponseEntity<?> cadastrar(@RequestBody UploadRequestDTO upload) {
         try {
             return ResponseEntity.status(HttpStatus.CREATED).body(service.cadastrar(upload));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Erro ao cadastrar o upload: " + e.getMessage());
+            return erro(e, "Erro ao cadastrar o upload");
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao cadastrar o upload: " + e.getMessage());
@@ -42,27 +37,26 @@ public class UploadController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UploadResponseDTO> buscarPorId(
-            @PathVariable int id,
-            @RequestHeader(value = "X-Usuario-Email", required = false) String email,
-            @RequestHeader(value = "X-Usuario-Senha", required = false) String senha) {
-        int idAutenticado = usuarioService.autenticar(email, senha);
+    public ResponseEntity<?> buscarPorId(@PathVariable int id) {
         try {
-            UploadResponseDTO upload = service.buscarPorId(id);
-            if (upload.usuario() == null || upload.usuario().idUsuario() != idAutenticado) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();   // upload de outro usuário
-            }
-            return ResponseEntity.ok(upload);
+            return ResponseEntity.ok(service.buscarPorId(id));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            // na busca por id, qualquer recusa significa que o upload não existe
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 
     @GetMapping
-    public ResponseEntity<List<UploadResponseDTO>> listar(
-            @RequestHeader(value = "X-Admin-Email", required = false) String adminEmail,
-            @RequestHeader(value = "X-Admin-Senha", required = false) String adminSenha) {
-        usuarioService.exigirAdministrador(adminEmail, adminSenha);
+    public ResponseEntity<List<UploadResponseDTO>> listar() {
         return ResponseEntity.ok(service.listar());
+    }
+
+    /** Recurso inexistente vira 404; qualquer outra falha de validação vira 400. */
+    private ResponseEntity<String> erro(IllegalArgumentException e, String contexto) {
+        String mensagem = e.getMessage();
+        if (mensagem != null && mensagem.contains("não encontrad")) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mensagem);
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(contexto + ": " + mensagem);
     }
 }

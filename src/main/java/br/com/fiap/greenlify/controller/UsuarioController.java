@@ -27,70 +27,70 @@ public class UsuarioController {
             service.cadastrar(usuario);
             return ResponseEntity.status(HttpStatus.CREATED).body("Usuário cadastrado com sucesso!");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            return erro(e, "Erro ao cadastrar o usuário");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao cadastrar o usuário: " + e.getMessage());
         }
     }
 
+    /** Valida e-mail e senha e devolve os dados do usuário (não cria sessão nem token). */
     @PostMapping("/login")
-    public ResponseEntity<UsuarioCadastroResponseDTO> login(@RequestBody LoginRequest login) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest login) {
         try {
             return ResponseEntity.ok(service.login(login.email(), login.senha()));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UsuarioCadastroResponseDTO> buscarPorId(
-            @PathVariable int id,
-            @RequestHeader(value = "X-Usuario-Email", required = false) String email,
-            @RequestHeader(value = "X-Usuario-Senha", required = false) String senha) {
-        service.exigirDono(email, senha, id);
+    public ResponseEntity<?> buscarPorId(@PathVariable int id) {
         try {
             return ResponseEntity.ok(service.buscarPorId(id));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return erro(e, "Erro ao buscar o usuário");
         }
     }
 
     @GetMapping
-    public ResponseEntity<List<UsuarioCadastroResponseDTO>> listar(
-            @RequestHeader(value = "X-Admin-Email", required = false) String adminEmail,
-            @RequestHeader(value = "X-Admin-Senha", required = false) String adminSenha) {
-        service.exigirAdministrador(adminEmail, adminSenha);
+    public ResponseEntity<List<UsuarioCadastroResponseDTO>> listar() {
         return ResponseEntity.ok(service.listar());
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<String> alterar(@PathVariable int id,
-                                          @RequestBody UsuarioCadastroRequestDTO objeto,
-                                          @RequestHeader(value = "X-Usuario-Email", required = false) String email,
-                                          @RequestHeader(value = "X-Usuario-Senha", required = false) String senha) {
-        service.exigirDono(email, senha, id);
+                                          @RequestBody UsuarioCadastroRequestDTO objeto) {
         try {
             service.alterar(objeto, id);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
-            if (e.getMessage() != null && e.getMessage().contains("não encontrado")) {
-                return ResponseEntity.notFound().build();
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            return erro(e, "Erro ao alterar o usuário");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao alterar o usuário: " + e.getMessage());
         }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluir(
-            @PathVariable int id,
-            @RequestHeader(value = "X-Usuario-Email", required = false) String email,
-            @RequestHeader(value = "X-Usuario-Senha", required = false) String senha) {
-        service.exigirDono(email, senha, id);
+    public ResponseEntity<String> excluir(@PathVariable int id) {
         try {
             service.excluir(id);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return erro(e, "Erro ao excluir o usuário");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao excluir o usuário: " + e.getMessage());
         }
+    }
+
+    /** Recurso inexistente vira 404; qualquer outra falha de validação vira 400. */
+    private ResponseEntity<String> erro(IllegalArgumentException e, String contexto) {
+        String mensagem = e.getMessage();
+        if (mensagem != null && mensagem.contains("não encontrad")) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mensagem);
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(contexto + ": " + mensagem);
     }
 }

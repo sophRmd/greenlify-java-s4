@@ -133,7 +133,7 @@ public class PerfilSustentavelDAO {
                     + "       u.nr_nivel_acesso AS u_nivel, u.ds_status_conta AS u_status, u.id_grupo AS u_grupo "
                     + "FROM Perfil_Sustentavel p "
                     + "LEFT JOIN Nivel_Contribuicao n ON n.id_nivel = p.id_nivel "
-                    + "LEFT JOIN Usuario u ON u.id_usuario = p.id_usuario AND u.nr_nivel_acesso = 0 ";
+                    + "LEFT JOIN Usuario u ON u.id_usuario = p.id_usuario ";
 
     /**
      * Busca um perfil sustentável pelo seu identificador, carregando

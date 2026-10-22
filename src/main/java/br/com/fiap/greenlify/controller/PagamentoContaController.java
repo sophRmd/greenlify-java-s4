@@ -25,17 +25,19 @@ public class PagamentoContaController {
             service.cadastrar(pagamento);
             return ResponseEntity.status(HttpStatus.CREATED).body("Pagamento cadastrado com sucesso!");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            return erro(e, "Erro ao cadastrar o pagamento");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao cadastrar o pagamento: " + e.getMessage());
         }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PagamentoContaResponseDTO> buscarPorId(@PathVariable int id) {
+    public ResponseEntity<?> buscarPorId(@PathVariable int id) {
         try {
             return ResponseEntity.ok(service.buscarPorId(id));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return erro(e, "Erro ao buscar o pagamento");
         }
     }
 
@@ -49,4 +51,12 @@ public class PagamentoContaController {
         return ResponseEntity.ok(service.listarPorUsuario(idUsuario));
     }
 
+    /** Recurso inexistente vira 404; qualquer outra falha de validação vira 400. */
+    private ResponseEntity<String> erro(IllegalArgumentException e, String contexto) {
+        String mensagem = e.getMessage();
+        if (mensagem != null && mensagem.contains("não encontrad")) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(mensagem);
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(contexto + ": " + mensagem);
+    }
 }
