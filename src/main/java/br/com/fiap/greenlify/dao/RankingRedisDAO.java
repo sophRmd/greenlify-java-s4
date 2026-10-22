@@ -73,7 +73,7 @@ public class RankingRedisDAO {
                     String.valueOf(idUsuario));
             return aplicado != null && aplicado == 1L ? Resultado.APLICADO : Resultado.JA_PROCESSADO;
         } catch (RuntimeException e) {
-            System.err.println("Redis indisponível (incrementar): " + e.getMessage());
+            System.err.println("Redis indisponível (incrementar): " + causa(e));
             return Resultado.REDIS_INDISPONIVEL;
         }
     }
@@ -93,7 +93,7 @@ public class RankingRedisDAO {
             }
             return mapa;
         } catch (RuntimeException e) {
-            System.err.println("Redis indisponível (listar): " + e.getMessage());
+            System.err.println("Redis indisponível (listar): " + causa(e));
             return null;
         }
     }
@@ -134,7 +134,7 @@ public class RankingRedisDAO {
             }
             return new Reconciliacao(corrigidos, removidos);
         } catch (RuntimeException e) {
-            System.err.println("Redis indisponível (reconciliar): " + e.getMessage());
+            System.err.println("Redis indisponível (reconciliar): " + causa(e));
             return null;
         }
     }
@@ -163,6 +163,9 @@ public class RankingRedisDAO {
                             .commandTimeout(Duration.ofSeconds(2)).useSsl().and().build()
                             : LettuceClientConfiguration.builder()
                             .commandTimeout(Duration.ofSeconds(2)).build();
+                    System.out.println("Redis: conectando em " + servidor.getHostName() + ":" + servidor.getPort()
+                            + " (usuário informado: " + !usuario.isEmpty() + ", senha informada: " + !senha.isEmpty()
+                            + ", ssl: " + ssl + ")");
                     LettuceConnectionFactory fabrica = new LettuceConnectionFactory(servidor, cliente);
                     fabrica.afterPropertiesSet();
                     t = new StringRedisTemplate(fabrica);
@@ -172,5 +175,14 @@ public class RankingRedisDAO {
             }
         }
         return t;
+    }
+
+    /** Causa real da falha (a mensagem do Spring é genérica: "Unable to connect to Redis"). */
+    private static String causa(Throwable e) {
+        Throwable raiz = e;
+        while (raiz.getCause() != null && raiz.getCause() != raiz) {
+            raiz = raiz.getCause();
+        }
+        return e.getMessage() + " | causa: " + raiz.getClass().getSimpleName() + ": " + raiz.getMessage();
     }
 }
