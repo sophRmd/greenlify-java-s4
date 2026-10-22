@@ -1,6 +1,8 @@
 package br.com.fiap.greenlify.dao;
 
 import br.com.fiap.greenlify.enums.CategoriaEnum;
+import br.com.fiap.greenlify.enums.DificuldadeEnum;
+import br.com.fiap.greenlify.enums.ImpactoEnum;
 import br.com.fiap.greenlify.enums.TipoMetricaEnum;
 import br.com.fiap.greenlify.enums.TipoMissaoEnum;
 import br.com.fiap.greenlify.models.Missao;
@@ -288,7 +290,7 @@ public class MissaoContinuaDAO {
                 "m.ds_requisitos, m.ds_comprovacao, m.ds_categoria, " +
                 "m.ds_tipo_missao, mc.nr_limite_realizacoes, " +
                 "mc.ds_tipo_metrica, mc.vl_metrica, " +
-                "p.id_pontuacao, p.nr_pontuacao " +
+                "p.id_pontuacao, p.nr_pontuacao, p.ds_impacto, p.ds_dificuldade " +
                 "FROM Missao m " +
                 "INNER JOIN Missao_Continua mc ON mc.id_missao = m.id_missao " +
                 "LEFT JOIN Pontuacao p ON p.id_pontuacao = mc.id_pontuacao " +
@@ -326,6 +328,8 @@ public class MissaoContinuaDAO {
                         Pontuacao pontuacao = new Pontuacao();
                         pontuacao.setIdPontuacao(idPontuacao);
                         pontuacao.setValorBase(rs.getInt("nr_pontuacao"));
+                        pontuacao.setImpacto(ImpactoEnum.valueOf(rs.getString("ds_impacto")));
+                        pontuacao.setDificuldade(DificuldadeEnum.valueOf(rs.getString("ds_dificuldade")));
                         continua.setPontuacao(pontuacao);
                     }
                 }
@@ -358,7 +362,7 @@ public class MissaoContinuaDAO {
                 "m.ds_requisitos, m.ds_comprovacao, m.ds_categoria, " +
                 "m.ds_tipo_missao, mc.nr_limite_realizacoes, " +
                 "mc.ds_tipo_metrica, mc.vl_metrica, " +
-                "p.id_pontuacao, p.nr_pontuacao " +
+                "p.id_pontuacao, p.nr_pontuacao, p.ds_impacto, p.ds_dificuldade " +
                 "FROM Missao m " +
                 "INNER JOIN Missao_Continua mc ON mc.id_missao = m.id_missao " +
                 "LEFT JOIN Pontuacao p ON p.id_pontuacao = mc.id_pontuacao " +
@@ -389,6 +393,8 @@ public class MissaoContinuaDAO {
                     Pontuacao pontuacao = new Pontuacao();
                     pontuacao.setIdPontuacao(idPontuacao);
                     pontuacao.setValorBase(rs.getInt(12));
+                    pontuacao.setImpacto(ImpactoEnum.valueOf(rs.getString(13)));
+                    pontuacao.setDificuldade(DificuldadeEnum.valueOf(rs.getString(14)));
                     continua.setPontuacao(pontuacao);
                 }
 
