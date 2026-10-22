@@ -21,7 +21,8 @@ import java.util.Set;
  * do Oracle, que continua sendo a fonte da verdade: nenhum método lança exceção quando o Redis
  * está fora do ar ({@code listar} e {@code reconciliar} devolvem {@code null}).
  *
- * <p>Usa REDIS_HOST/REDIS_PORT (mesmas do application.properties).</p>
+ * <p>Usa REDIS_HOST/REDIS_PORT (mesmas do application.properties) e, se o Redis for hospedado,
+ * REDIS_USERNAME, REDIS_PASSWORD e REDIS_SSL (true para conexão com TLS).</p>
  */
 public class RankingRedisDAO {
 
@@ -147,7 +148,20 @@ public class RankingRedisDAO {
                     RedisStandaloneConfiguration servidor = new RedisStandaloneConfiguration(
                             System.getenv().getOrDefault("REDIS_HOST", "localhost"),
                             Integer.parseInt(System.getenv().getOrDefault("REDIS_PORT", "6379").trim()));
-                    LettuceClientConfiguration cliente = LettuceClientConfiguration.builder()
+                    // Redis hospedado (ex.: Redis Cloud) exige usuário/senha; local e Docker não precisam.
+                    String usuario = System.getenv().getOrDefault("REDIS_USERNAME", "").trim();
+                    String senha = System.getenv().getOrDefault("REDIS_PASSWORD", "").trim();
+                    if (!usuario.isEmpty()) {
+                        servidor.setUsername(usuario);
+                    }
+                    if (!senha.isEmpty()) {
+                        servidor.setPassword(senha);
+                    }
+                    boolean ssl = "true".equalsIgnoreCase(System.getenv().getOrDefault("REDIS_SSL", "false").trim());
+                    LettuceClientConfiguration cliente = ssl
+                            ? LettuceClientConfiguration.builder()
+                            .commandTimeout(Duration.ofSeconds(2)).useSsl().and().build()
+                            : LettuceClientConfiguration.builder()
                             .commandTimeout(Duration.ofSeconds(2)).build();
                     LettuceConnectionFactory fabrica = new LettuceConnectionFactory(servidor, cliente);
                     fabrica.afterPropertiesSet();
