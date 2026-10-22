@@ -6,6 +6,12 @@ import br.com.fiap.greenlify.service.UploadService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import java.util.List;
 
@@ -33,6 +39,49 @@ public class UploadController {
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao cadastrar o upload: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Envio com o vídeo de verdade (multipart). O vídeo é salvo em um arquivo temporário,
+     * analisado pelo serviço de IA (pHash + Gemini) e apagado ao final, com ou sem erro.
+     */
+    @PostMapping(value = "/validar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> cadastrarComVideo(
+            @RequestParam("idUsuario") int idUsuario,
+            @RequestParam("idMissao") int idMissao,
+            @RequestParam("video") MultipartFile video) {
+        if (video.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Erro ao cadastrar o upload: nenhum vídeo foi enviado.");
+        }
+
+        Path temporario = null;
+        try {
+            // Alguns navegadores enviam o caminho completo: fica só o nome do arquivo.
+            String original = video.getOriginalFilename() == null ? "" : video.getOriginalFilename();
+            String nome = original.replaceAll(".*[\\\\/]", "");
+            double tamanhoMB = video.getSize() / (1024.0 * 1024.0);
+
+            temporario = Files.createTempFile("greenlify-", ".upload");
+            video.transferTo(temporario);
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(service.cadastrarComVideo(idUsuario, idMissao, nome, tamanhoMB, temporario));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Erro ao cadastrar o upload: " + e.getMessage());
+        } catch (IllegalStateException | IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao cadastrar o upload: " + e.getMessage());
+        } finally {
+            if (temporario != null) {
+                try {
+                    Files.deleteIfExists(temporario);
+                } catch (IOException ignorado) {
+                    // arquivo temporário: o sistema operacional limpa depois
+                }
+            }
         }
     }
 
