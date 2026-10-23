@@ -19,7 +19,7 @@ import java.util.List;
  * Envio de comprovações. Os endpoints não exigem login. Um upload gravado não tem alteração nem
  * exclusão: o resultado da análise e a pontuação já consolidada ficam preservados.
  */
-@CrossOrigin("*")
+@CrossOrigin(originPatterns = {"https://*.vercel.app", "http://localhost:*"})
 @RestController
 @RequestMapping("/uploads")
 public class UploadController {
