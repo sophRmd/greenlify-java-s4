@@ -22,34 +22,68 @@ import java.util.Map;
  */
 public class UsuarioSeloDAO {
     /**
-     * Registra a coleta de um selo por um usuário.
+     * Registra a coleta de um selo por um usuário, em uma transação: confere de novo (com o usuário
+     * travado) se o selo ainda não foi coletado e só então grava.
      *
      * @param usuarioSelo dados da coleta (usuário, selo e data)
+     * @throws IllegalArgumentException se o usuário não existir ou já tiver coletado o selo
+     * @throws IllegalStateException    se o banco falhar (antes o erro era engolido e a API respondia sucesso)
      */
     public void cadastrar(UsuarioSelo usuarioSelo) {
-        Connection conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
+        int idUsuario = usuarioSelo.getUsuario().getIdUsuario();
+        int idSelo = usuarioSelo.getSelo().getIdSelo();
 
-        try {
-            String sql = "INSERT INTO Usuario_Selo (dt_coleta, id_usuario, id_selo) VALUES (?, ?, ?)";
-            ps = conexao.prepareStatement(sql);
-            ps.setDate(1, Date.valueOf(usuarioSelo.getDataColeta()));
-            ps.setInt(2, usuarioSelo.getUsuario().getIdUsuario());
-            ps.setInt(3, usuarioSelo.getSelo().getIdSelo());
+        try (Connection conexao = ConnectionFactory.obterConexao()) {
+            boolean confirmado = false;
+            try {
+                conexao.setAutoCommit(false);
 
-            ps.executeUpdate();
-            ps.close();
+                // Trava a linha do usuário: duas coletas simultâneas do mesmo selo ficam em fila e a
+                // segunda enxerga a primeira, então o selo nunca é gravado (nem contado no grupo) duas vezes.
+                try (PreparedStatement trava = conexao.prepareStatement(
+                        "SELECT id_usuario FROM Usuario WHERE id_usuario = ? FOR UPDATE")) {
+                    trava.setInt(1, idUsuario);
+                    try (ResultSet rs = trava.executeQuery()) {
+                        if (!rs.next()) {
+                            throw new IllegalArgumentException("O usuário informado não existe.");
+                        }
+                    }
+                }
 
+                try (PreparedStatement existe = conexao.prepareStatement(
+                        "SELECT COUNT(*) FROM Usuario_Selo WHERE id_usuario = ? AND id_selo = ?")) {
+                    existe.setInt(1, idUsuario);
+                    existe.setInt(2, idSelo);
+                    try (ResultSet rs = existe.executeQuery()) {
+                        if (rs.next() && rs.getInt(1) > 0) {
+                            throw new IllegalArgumentException("O usuário já coletou esse selo.");
+                        }
+                    }
+                }
+
+                String sql = "INSERT INTO Usuario_Selo (dt_coleta, id_usuario, id_selo) VALUES (?, ?, ?)";
+                try (PreparedStatement ps = conexao.prepareStatement(sql)) {
+                    ps.setDate(1, Date.valueOf(usuarioSelo.getDataColeta()));
+                    ps.setInt(2, idUsuario);
+                    ps.setInt(3, idSelo);
+                    if (ps.executeUpdate() != 1) {
+                        throw new IllegalStateException("A coleta do selo não foi gravada.");
+                    }
+                }
+
+                conexao.commit();
+                confirmado = true;
+            } finally {
+                // Desfaz antes de devolver a conexão ao pool (no Oracle, ligar o autocommit com a
+                // transação aberta confirmaria tudo).
+                if (!confirmado) {
+                    conexao.rollback();
+                }
+                conexao.setAutoCommit(true);
+            }
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            throw new IllegalStateException("Não foi possível registrar a coleta do selo.", e);
         }
     }
 
@@ -59,30 +93,20 @@ public class UsuarioSeloDAO {
      * @param usuarioSelo dados atualizados (o id é usado como referência)
      */
     public void alterar(UsuarioSelo usuarioSelo) {
-        Connection conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
+        String sql = "UPDATE Usuario_Selo SET dt_coleta = ?, id_usuario = ?, id_selo = ? WHERE id_usuario_selo = ?";
 
-        try {
-            String sql = "UPDATE Usuario_Selo SET dt_coleta = ?, id_usuario = ?, id_selo = ? WHERE id_usuario_selo = ?";
-            ps = conexao.prepareStatement(sql);
+        try (Connection conexao = ConnectionFactory.obterConexao();
+             PreparedStatement ps = conexao.prepareStatement(sql)) {
             ps.setDate(1, Date.valueOf(usuarioSelo.getDataColeta()));
             ps.setInt(2, usuarioSelo.getUsuario().getIdUsuario());
             ps.setInt(3, usuarioSelo.getSelo().getIdSelo());
             ps.setInt(4, usuarioSelo.getIdUsuarioSelo());
 
             ps.executeUpdate();
-            ps.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            throw new IllegalStateException("Não foi possível alterar a coleta do selo.", e);
         }
     }
 
@@ -92,26 +116,15 @@ public class UsuarioSeloDAO {
      * @param idUsuarioSelo id do registro a ser excluído
      */
     public void excluir(int idUsuarioSelo) {
-        Connection conexao = ConnectionFactory.obterConexao();
-        PreparedStatement ps = null;
-
-        try {
-            ps = conexao.prepareStatement("DELETE FROM Usuario_Selo WHERE id_usuario_selo = ?");
+        try (Connection conexao = ConnectionFactory.obterConexao();
+             PreparedStatement ps = conexao.prepareStatement("DELETE FROM Usuario_Selo WHERE id_usuario_selo = ?")) {
             ps.setInt(1, idUsuarioSelo);
 
             ps.executeUpdate();
-            ps.close();
 
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (conexao != null && !conexao.isClosed()) {
-                    conexao.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            throw new IllegalStateException("Não foi possível excluir a coleta do selo.", e);
         }
     }
 
