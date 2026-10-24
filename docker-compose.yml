@@ -13,6 +13,9 @@ services:
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: "oracle.jdbc.OracleDriver"
       DB_POOL_MAX: "${DB_POOL_MAX:-3}"
 
+      # Libera POST /dados-demo/restaurar (apaga e recarrega os dados de demonstração)
+      SEED_HABILITADO: "${SEED_HABILITADO:-false}"
+
       # Redis do ranking all time (se cair, o ranking usa o Oracle)
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GreenLify - Restaurar dados de demonstração</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 520px; margin: 3rem auto; padding: 0 1rem; color: #1b2a1f; }
+        button { background: #2e7d32; color: #fff; border: 0; border-radius: 8px; padding: .8rem 1.4rem; font-size: 1rem; cursor: pointer; }
+        button:disabled { opacity: .6; cursor: wait; }
+        #resultado { margin-top: 1.2rem; padding: .8rem 1rem; border-radius: 8px; display: none; }
+        .ok { background: #e8f5e9; } .erro { background: #fdecea; }
+    </style>
+</head>
+<body>
+<h1>Restaurar dados de demonstração</h1>
+<p>Apaga uploads, selos, ranking, resgates, pagamentos, perfis e sequências e recarrega os dados de exemplo.</p>
+<button id="botao">Restaurar dados</button>
+<div id="resultado"></div>
+
+<script>
+    // Mesma origem da API (a página é servida pelo próprio Spring). Se abrir o HTML de outro lugar,
+    // troque por a URL da API, ex.: "http://localhost:8080".
+    const API = "";
+
+    const botao = document.getElementById("botao");
+    const resultado = document.getElementById("resultado");
+
+    botao.addEventListener("click", async () => {
+        if (!confirm("Isso APAGA os dados atuais e recarrega os de demonstração. Continuar?")) return;
+        botao.disabled = true;
+        resultado.style.display = "none";
+        try {
+            const resposta = await fetch(API + "/dados-demo/restaurar", { method: "POST" });
+            const texto = await resposta.text();
+            resultado.textContent = texto;
+            resultado.className = resposta.ok ? "ok" : "erro";
+        } catch (e) {
+            resultado.textContent = "Não foi possível falar com a API.";
+            resultado.className = "erro";
+        }
+        resultado.style.display = "block";
+        botao.disabled = false;
+    });
+</script>
+</body>
+</html>
