@@ -44,6 +44,7 @@ public class UploadService {
     private final FingerprintDAO fingerprintDAO;
     private final FingerprintFrameDAO frameDAO;
     private final RankingAllTimeService rankingAllTimeService;
+    private final RankingService rankingService;
     private final AiServiceClient aiClient;
 
     /** Confiança (%) a partir da qual o upload é reprovado por duplicidade. */
@@ -76,6 +77,7 @@ public class UploadService {
         this.fingerprintDAO = new FingerprintDAO();
         this.frameDAO = new FingerprintFrameDAO();
         this.rankingAllTimeService = new RankingAllTimeService();
+        this.rankingService = new RankingService();
         this.aiClient = new AiServiceClient();
     }
 
@@ -162,7 +164,24 @@ public class UploadService {
                     usuario.getIdUsuario(), missao.getIdMissao(), dia, resultado.pontos());
         }
 
+        atualizarPosicoesDoMes(upload);
         return UploadMapper.toDto(upload);
+    }
+
+    /**
+     * Upload aprovado muda os pontos do mês: recalcula as posições dos rankings mensais abertos
+     * (não cria nem fecha rankings). O upload já está gravado; se o recálculo falhar, só é
+     * registrado e o próximo POST /rankings/atualizar corrige.
+     */
+    private void atualizarPosicoesDoMes(Upload upload) {
+        if (upload.getStatus() != StatusUploadEnum.APROVADO) {
+            return;
+        }
+        try {
+            rankingService.atualizarRankings();
+        } catch (RuntimeException e) {
+            System.err.println("Não foi possível atualizar os rankings do mês: " + e.getMessage());
+        }
     }
 
     /**
@@ -242,6 +261,7 @@ public class UploadService {
             rankingAllTimeService.registrarMissaoConcluida(
                     usuario.getIdUsuario(), missao.getIdMissao(), dia, resultado.pontos());
         }
+        atualizarPosicoesDoMes(upload);
         return UploadMapper.toDto(upload);
     }
 
