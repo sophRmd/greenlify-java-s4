@@ -15,7 +15,8 @@ import java.util.Map;
  * Representa um período de ranking mensal dentro da plataforma GreenLify, responsável por calcular
  * e listar a classificação de usuários e de grupos.
  *
- * <p>Individual: missões contínuas concluídas dentro do período (empate: cadastro mais antigo).
+ * <p>Individual: pontos das missões contínuas concluídas dentro do período (empate: mais missões
+ * concluídas e, depois, cadastro mais antigo).
  * Grupal: total de Selos Verdes resgatados individualmente pelos integrantes atuais do grupo
  * (ver {@code UsuarioSeloDAO.contarSelosPorGrupo}; o tamanho do grupo não entra na conta).
  * Esses registros (Ranking/Posicao_Ranking) são do ciclo
@@ -79,9 +80,10 @@ public class Ranking {
 
     /**
      * Calcula o ranking de usuários do período (de {@code dataInicio} a
-     * {@code dataFim}): ordena do maior para o menor número de missões
-     * concluídas dentro do período e, em caso de empate, pelo cadastro mais
-     * antigo (menor id de usuário); a carteira não entra na classificação.
+     * {@code dataFim}): ordena do maior para o menor total de pontos das
+     * missões concluídas dentro do período e, em caso de empate, por mais
+     * missões concluídas e pelo cadastro mais antigo (menor id de usuário);
+     * a carteira não entra na classificação.
      *
      * @return lista de posições de ranking dos usuários, já ordenada e
      *         numerada, ou lista vazia caso não existam usuários cadastrados
@@ -99,15 +101,18 @@ public class Ranking {
         // uma única consulta agrupada: missões contínuas concluídas por usuário dentro do período
         // (só o ciclo mensal; o total geral fica no ranking all time, que vive no Redis)
         Map<Integer, Integer> missoesNoPeriodo = new HashMap<>();
+        Map<Integer, Integer> pontosNoPeriodo = new HashMap<>();
         if (periodoValido()) {
-            missoesNoPeriodo = new UsuarioMissaoDAO().contarConcluidasPorUsuario(dataInicio, dataFim);
+            UsuarioMissaoDAO usuarioMissaoDAO = new UsuarioMissaoDAO();
+            missoesNoPeriodo = usuarioMissaoDAO.contarConcluidasPorUsuario(dataInicio, dataFim);
+            pontosNoPeriodo = usuarioMissaoDAO.somarPontosElegiveisPorUsuario(dataInicio, dataFim);
         }
 
         for (UsuarioComum usuario : todosUsuarios) {
             PosicaoRanking pr = new PosicaoRanking();
             pr.setUsuario(usuario);
             int missoes = missoesNoPeriodo.getOrDefault(usuario.getIdUsuario(), 0);
-            pr.setPontuacao(missoes);
+            pr.setPontuacao(pontosNoPeriodo.getOrDefault(usuario.getIdUsuario(), 0));
             pr.setMissoesRealizadas(missoes);
             pr.setRanking(this);
 
@@ -117,6 +122,10 @@ public class Ranking {
         posicoes.sort(new Comparator<PosicaoRanking>() {
             @Override
             public int compare(PosicaoRanking p1, PosicaoRanking p2) {
+                int porPontos = Integer.compare(p2.getPontuacao(), p1.getPontuacao());
+                if (porPontos != 0) {
+                    return porPontos;
+                }
                 int porMissoes = Integer.compare(p2.getMissoesRealizadas(), p1.getMissoesRealizadas());
                 if (porMissoes != 0) {
                     return porMissoes;
@@ -154,7 +163,7 @@ public class Ranking {
             for (PosicaoRanking pr : posicoesUsuarios) {
                 System.out.println("\n" + pr.getPosicao() + "° lugar");
                 System.out.println("Nome: " + pr.getUsuario().getNome());
-                System.out.println("Missões concluídas: " + pr.getPontuacao());
+                System.out.println("Pontos: " + pr.getPontuacao());
             }
         } else {
             System.out.println("Nenhum usuário encontrado no ranking.");

@@ -482,6 +482,50 @@ public class UsuarioMissaoDAO {
     }
 
     /**
+     * Pontos elegíveis por usuário dentro de um período (ranking mensal). Mesma regra do all time
+     * ({@link #somarPontosElegiveisPorUsuario()}): cada mês em que o usuário concluiu uma missão
+     * contínua (uploads APROVADOS em número igual ou maior que o limite, com {@code dt_envio} dentro
+     * do período) vale uma vez os pontos da pontuação da missão.
+     *
+     * @param inicio primeiro dia do período (inclusive)
+     * @param fim    último dia do período (inclusive)
+     * @return mapa idUsuario -> pontos no período (só usuários com pontos)
+     * @throws IllegalStateException se o banco falhar
+     */
+    public Map<Integer, Integer> somarPontosElegiveisPorUsuario(LocalDate inicio, LocalDate fim) {
+        String sql = "SELECT id_usuario, SUM(pontos) AS total FROM ("
+                + "SELECT up.id_usuario AS id_usuario, p.nr_pontuacao AS pontos "
+                + "FROM Upload up "
+                + "JOIN Missao_Continua mc ON mc.id_missao = up.id_missao "
+                + "JOIN Pontuacao p ON p.id_pontuacao = mc.id_pontuacao "
+                + "WHERE up.ds_status = 'APROVADO' AND up.id_usuario IS NOT NULL "
+                + "AND mc.nr_limite_realizacoes > 0 "
+                + "AND up.dt_envio >= ? AND up.dt_envio < ? "
+                + "GROUP BY up.id_usuario, up.id_missao, mc.nr_limite_realizacoes, p.nr_pontuacao, "
+                + "TRUNC(up.dt_envio, 'MM') "
+                + "HAVING COUNT(*) >= mc.nr_limite_realizacoes) "
+                + "GROUP BY id_usuario";
+
+        Map<Integer, Integer> totais = new HashMap<>();
+        try (Connection con = ConnectionFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setDate(1, Date.valueOf(inicio));
+            ps.setDate(2, Date.valueOf(fim.plusDays(1)));   // dia seguinte, exclusivo: pega o dia final inteiro
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    totais.put(rs.getInt("id_usuario"), rs.getInt("total"));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new IllegalStateException("Não foi possível calcular os pontos do período.", e);
+        }
+        return totais;
+    }
+
+    /**
      * Pontos elegíveis por usuário, a métrica do ranking all time no Redis: cada mês em que o usuário
      * concluiu uma missão contínua (uploads APROVADOS em número igual ou maior que o limite) vale uma
      * vez os pontos da pontuação da missão, a mesma regra de
