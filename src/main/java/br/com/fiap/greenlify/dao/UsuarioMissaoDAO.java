@@ -460,12 +460,22 @@ public class UsuarioMissaoDAO {
     }
 
     /**
-     * Conta, por usuário, todas as missões contínuas já concluídas (ranking all time).
+     * Conta, por usuário, as missões realizadas: quantos registros de Usuario_Missao (de missão
+     * contínua) têm pelo menos um upload APROVADO da mesma missão. Cada missão conta uma única vez,
+     * não importa quantos uploads aprovados ou em quantos meses. É o número mostrado no perfil e
+     * no resumo do usuário.
      *
      * @return mapa idUsuario -> total de missões concluídas (só usuários com pelo menos uma)
      */
     public Map<Integer, Integer> contarConcluidasPorUsuario() {
-        return consultarConcluidas(sqlConcluidas(false), null, null);
+        String sql = "SELECT um.id_usuario AS id_usuario, COUNT(DISTINCT um.id_usuario_missao) AS total "
+                + "FROM Usuario_Missao um "
+                + "JOIN Missao_Continua mc ON mc.id_missao = um.id_missao "
+                + "WHERE EXISTS (SELECT 1 FROM Upload up "
+                + "WHERE up.id_usuario = um.id_usuario AND up.id_missao = um.id_missao "
+                + "AND up.ds_status = 'APROVADO') "
+                + "GROUP BY um.id_usuario";
+        return consultarConcluidas(sql, null, null);
     }
 
     /**
