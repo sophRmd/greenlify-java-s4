@@ -65,15 +65,5 @@ INSERT INTO Fingerprint_Frame (nr_frame, nr_tempo_segundo, ds_phash, ds_embeddin
 INSERT INTO Fingerprint_Frame (nr_frame, nr_tempo_segundo, ds_phash, ds_embedding, id_fingerprint) VALUES (2, 2, 'abbccddeeff00112', NULL, 10);
 INSERT INTO Fingerprint_Frame (nr_frame, nr_tempo_segundo, ds_phash, ds_embedding, id_fingerprint) VALUES (3, 3, 'bccddeeff0011223', NULL, 10);
 
-INSERT INTO Usuario_Missao (nr_tentativas, nr_progresso_atual, id_usuario, id_missao) VALUES (2, 10, 1, 1);
-INSERT INTO Usuario_Missao (nr_tentativas, nr_progresso_atual, id_usuario, id_missao) VALUES (1, 5, 2, 2);
-INSERT INTO Usuario_Missao (nr_tentativas, nr_progresso_atual, id_usuario, id_missao) VALUES (1, 0, 3, 4);
-INSERT INTO Usuario_Missao (nr_tentativas, nr_progresso_atual, id_usuario, id_missao) VALUES (1, 0, 4, 4);
-INSERT INTO Usuario_Missao (nr_tentativas, nr_progresso_atual, id_usuario, id_missao) VALUES (1, 0, 5, 10);
-INSERT INTO Usuario_Missao (nr_tentativas, nr_progresso_atual, id_usuario, id_missao) VALUES (1, 2, 6, 13);
-INSERT INTO Usuario_Missao (nr_tentativas, nr_progresso_atual, id_usuario, id_missao) VALUES (1, 5, 8, 19);
-INSERT INTO Usuario_Missao (nr_tentativas, nr_progresso_atual, id_usuario, id_missao) VALUES (2, 100, 10, 25);
-INSERT INTO Usuario_Missao (nr_tentativas, nr_progresso_atual, id_usuario, id_missao) VALUES (1, 3, 4, 28);
-INSERT INTO Usuario_Missao (nr_tentativas, nr_progresso_atual, id_usuario, id_missao) VALUES (1, 2, 8, 29);
 
 COMMIT;
