@@ -432,24 +432,23 @@ public class UsuarioMissaoDAO {
     // ------------------------------------------------------------------
 
     /**
-     * Conclusões de missões contínuas: cada mês em que o usuário teve uploads APROVADOS
-     * em número igual ou maior que o limite da missão vale uma conclusão. É contado
-     * pelos uploads (e não por Usuario_Missao) porque o progresso reinicia todo mês e
-     * assim as conclusões de meses anteriores continuam valendo nos rankings.
+     * Conclusões de missões contínuas: parte de Usuario_Missao e conta cada mês em que o
+     * usuário tem pelo menos um upload APROVADO daquela missão (o limite de realizações não é
+     * exigido aqui). É agrupado por mês porque o progresso reinicia todo mês e assim as
+     * conclusões de meses anteriores continuam valendo nos rankings.
      *
      * <p>Missões mensais não entram aqui: a conclusão mensal vale para o streak e para os
      * registros de conclusão (dt_conclusao), não para a pontuação do ranking.</p>
      */
     private static final String SQL_CONCLUIDAS_CONTINUAS =
-            "SELECT up.id_usuario AS id_usuario "
-                    + "FROM Upload up "
-                    + "JOIN Missao_Continua mc ON mc.id_missao = up.id_missao "
-                    + "WHERE up.ds_status = 'APROVADO' AND up.id_usuario IS NOT NULL "
-                    + "AND mc.nr_limite_realizacoes > 0 ";
+            "SELECT um.id_usuario AS id_usuario "
+                    + "FROM Usuario_Missao um "
+                    + "JOIN Missao_Continua mc ON mc.id_missao = um.id_missao "
+                    + "JOIN Upload up ON up.id_usuario = um.id_usuario AND up.id_missao = um.id_missao "
+                    + "WHERE up.ds_status = 'APROVADO' ";
 
     private static final String SQL_CONCLUIDAS_CONTINUAS_AGRUPAR =
-            "GROUP BY up.id_usuario, up.id_missao, mc.nr_limite_realizacoes, TRUNC(up.dt_envio, 'MM') "
-                    + "HAVING COUNT(*) >= mc.nr_limite_realizacoes ";
+            "GROUP BY um.id_usuario_missao, um.id_usuario, TRUNC(up.dt_envio, 'MM') ";
 
     /** Monta a consulta de conclusões por usuário, com ou sem filtro de período. */
     private static String sqlConcluidas(boolean comPeriodo) {
@@ -483,9 +482,9 @@ public class UsuarioMissaoDAO {
 
     /**
      * Pontos elegíveis por usuário dentro de um período (ranking mensal). Mesma regra do all time
-     * ({@link #somarPontosElegiveisPorUsuario()}): cada mês em que o usuário concluiu uma missão
-     * contínua (uploads APROVADOS em número igual ou maior que o limite, com {@code dt_envio} dentro
-     * do período) vale uma vez os pontos da pontuação da missão.
+     * ({@link #somarPontosElegiveisPorUsuario()}): para cada Usuario_Missao de missão contínua,
+     * cada mês com pelo menos um upload APROVADO daquela missão ({@code dt_envio} dentro do
+     * período) vale uma vez os pontos da pontuação da missão.
      *
      * @param inicio primeiro dia do período (inclusive)
      * @param fim    último dia do período (inclusive)
@@ -494,16 +493,15 @@ public class UsuarioMissaoDAO {
      */
     public Map<Integer, Integer> somarPontosElegiveisPorUsuario(LocalDate inicio, LocalDate fim) {
         String sql = "SELECT id_usuario, SUM(pontos) AS total FROM ("
-                + "SELECT up.id_usuario AS id_usuario, p.nr_pontuacao AS pontos "
-                + "FROM Upload up "
-                + "JOIN Missao_Continua mc ON mc.id_missao = up.id_missao "
+                + "SELECT um.id_usuario AS id_usuario, p.nr_pontuacao AS pontos "
+                + "FROM Usuario_Missao um "
+                + "JOIN Missao_Continua mc ON mc.id_missao = um.id_missao "
                 + "JOIN Pontuacao p ON p.id_pontuacao = mc.id_pontuacao "
-                + "WHERE up.ds_status = 'APROVADO' AND up.id_usuario IS NOT NULL "
-                + "AND mc.nr_limite_realizacoes > 0 "
+                + "JOIN Upload up ON up.id_usuario = um.id_usuario AND up.id_missao = um.id_missao "
+                + "WHERE up.ds_status = 'APROVADO' "
                 + "AND up.dt_envio >= ? AND up.dt_envio < ? "
-                + "GROUP BY up.id_usuario, up.id_missao, mc.nr_limite_realizacoes, p.nr_pontuacao, "
-                + "TRUNC(up.dt_envio, 'MM') "
-                + "HAVING COUNT(*) >= mc.nr_limite_realizacoes) "
+                + "GROUP BY um.id_usuario_missao, um.id_usuario, p.nr_pontuacao, "
+                + "TRUNC(up.dt_envio, 'MM')) "
                 + "GROUP BY id_usuario";
 
         Map<Integer, Integer> totais = new HashMap<>();
@@ -526,11 +524,10 @@ public class UsuarioMissaoDAO {
     }
 
     /**
-     * Pontos elegíveis por usuário, a métrica do ranking all time no Redis: cada mês em que o usuário
-     * concluiu uma missão contínua (uploads APROVADOS em número igual ou maior que o limite) vale uma
-     * vez os pontos da pontuação da missão, a mesma regra de
-     * {@link br.com.fiap.greenlify.models.Pontuacao#pontosElegiveis}. Missões mensais e progresso sem
-     * conclusão não pontuam. É a fonte da verdade com que a reconciliação corrige o Redis.
+     * Pontos elegíveis por usuário, a métrica do ranking all time no Redis: para cada Usuario_Missao
+     * de missão contínua, cada mês com pelo menos um upload APROVADO daquela missão vale uma vez os
+     * pontos da pontuação da missão. Missões mensais, uploads que não estão APROVADOS e usuários sem
+     * registro em Usuario_Missao na missão não pontuam. É a fonte da verdade com que a reconciliação corrige o Redis.
      *
      * <p>Ao contrário das consultas de contagem, uma falha do banco não devolve mapa vazio: o mapa
      * vazio significaria "ninguém pontuou" e a reconciliação apagaria o Redis.</p>
@@ -540,15 +537,14 @@ public class UsuarioMissaoDAO {
      */
     public Map<Integer, Integer> somarPontosElegiveisPorUsuario() {
         String sql = "SELECT id_usuario, SUM(pontos) AS total FROM ("
-                + "SELECT up.id_usuario AS id_usuario, p.nr_pontuacao AS pontos "
-                + "FROM Upload up "
-                + "JOIN Missao_Continua mc ON mc.id_missao = up.id_missao "
+                + "SELECT um.id_usuario AS id_usuario, p.nr_pontuacao AS pontos "
+                + "FROM Usuario_Missao um "
+                + "JOIN Missao_Continua mc ON mc.id_missao = um.id_missao "
                 + "JOIN Pontuacao p ON p.id_pontuacao = mc.id_pontuacao "
-                + "WHERE up.ds_status = 'APROVADO' AND up.id_usuario IS NOT NULL "
-                + "AND mc.nr_limite_realizacoes > 0 "
-                + "GROUP BY up.id_usuario, up.id_missao, mc.nr_limite_realizacoes, p.nr_pontuacao, "
-                + "TRUNC(up.dt_envio, 'MM') "
-                + "HAVING COUNT(*) >= mc.nr_limite_realizacoes) "
+                + "JOIN Upload up ON up.id_usuario = um.id_usuario AND up.id_missao = um.id_missao "
+                + "WHERE up.ds_status = 'APROVADO' "
+                + "GROUP BY um.id_usuario_missao, um.id_usuario, p.nr_pontuacao, "
+                + "TRUNC(up.dt_envio, 'MM')) "
                 + "GROUP BY id_usuario";
 
         Map<Integer, Integer> totais = new HashMap<>();
